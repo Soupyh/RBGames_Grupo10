@@ -2,14 +2,15 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp") version "2.0.21-1.0.25"
 }
 
 android {
-    namespace = "com.example.rbgames_grupo1"
+    namespace = "com.example.uinavegacion"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.rbgames_grupo1"
+        applicationId = "com.example.uinavegacion"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -56,4 +57,17 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    //librerias nuevas
+    implementation("androidx.navigation:navigation-compose:2.9.5")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    // Material icons (necesarios para Visibility / VisibilityOff)
+    implementation("androidx.compose.material:material-icons-extended")
+
+
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-kts:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
 }
