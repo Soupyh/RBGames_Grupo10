@@ -21,6 +21,7 @@ import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel
 //1 Lo primero que creamos en el archivo
 @Composable                                                  // Pantalla Login conectada al VM
 fun LoginScreenVm(
+    vm: AuthViewModel,
     onLoginOkNavigateHome: () -> Unit,                       // Navega a Home cuando el login es exitoso
     onGoRegister: () -> Unit                                 // Navega a Registro
 ) {

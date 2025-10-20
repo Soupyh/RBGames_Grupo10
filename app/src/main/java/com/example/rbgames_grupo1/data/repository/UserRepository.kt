@@ -1,44 +1,40 @@
 package com.example.rbgames_grupo1.data.repository
 
 
-import com.example.rbgames_grupo1.data.user.UserDao
-import com.example.rbgames_grupo1.data.user.UserEntity
+import com.example.rbgames_grupo1.data.local.users.UserDao
+import com.example.rbgames_grupo1.data.local.users.UserEntity
 import java.lang.IllegalArgumentException
-
-
+import kotlin.text.insert
 
 
 class UserRepository (
     private val userDao: UserDao
 ){
-    //login
-    suspend fun login(email:String, pass: String): Result<UserEntity>{
-        val user = userDao.getByEmail(email)
-        return if(user != null && user.pass == pass){
-            Result.success(user)
-        }
-        else{
-            Result.failure(IllegalArgumentException("Datos Inválidos"))
+    // Login: busca por email y valida contraseña
+    suspend fun login(email: String, password: String): Result<UserEntity> {
+        val user = userDao.getByEmail(email)                         // Busca usuario
+        return if (user != null && user.password == password) {      // Verifica pass
+            Result.success(user)                                     // Éxito
+        } else {
+            Result.failure(IllegalArgumentException("Credenciales inválidas")) // Error
         }
     }
 
-    //registro
-    suspend fun register(name: String, email: String, phone: String, pass: String): Result<Long>{
-        val exists = userDao.getByEmail(email) != null
-        if(exists){
-            return Result.failure(IllegalArgumentException("Corre en uso"))
+    // Registro: valida no duplicado y crea nuevo usuario (con teléfono)
+    suspend fun register(name: String, email: String, phone: String, password: String): Result<Long> {
+        val exists = userDao.getByEmail(email) != null               // ¿Correo ya usado?
+        if (exists) {
+            return Result.failure(IllegalStateException("El correo ya está registrado"))
         }
-        else{
-            val id = userDao.insertar(
-                UserEntity(
-                    name = name,
-                    email = email,
-                    phone = phone,
-                    pass = pass
-                )
+        val id = userDao.insert(                                     // Inserta nuevo
+            UserEntity(
+                name = name,
+                email = email,
+                phone = phone,                                       // Teléfono incluido
+                password = password
             )
-            return Result.success(id)
-        }
+        )
+        return Result.success(id)                                    // Devuelve ID generado
     }
 
 }

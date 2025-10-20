@@ -4,44 +4,52 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.rememberNavController
+import com.example.rbgames_grupo1.data.local.database.AppDatabase
+import com.example.rbgames_grupo1.data.repository.UserRepository
+import com.example.rbgames_grupo1.navigation.AppNavGraph
 import com.example.rbgames_grupo1.ui.theme.RBGames_Grupo1Theme
+import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel
+import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            RBGames_Grupo1Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            AppRoot()
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun AppRoot() {
+    val context = LocalContext.current.applicationContext
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    RBGames_Grupo1Theme {
-        Greeting("Android")
+    val db = AppDatabase.getInstance(context)
+
+    val userDao = db.userDao()
+
+    val userRepository = UserRepository(userDao)
+
+    val authViewModel: AuthViewModel = viewModel(
+        factory = AuthViewModelFactory(userRepository)
+    )
+
+    val navController = rememberNavController()
+    MaterialTheme{
+        Surface(color = MaterialTheme.colorScheme.background) {
+            AppNavGraph(
+                navController = navController,
+                authViewModel = authViewModel // <-- NUEVO parámetro
+            )
+        }
     }
+
+
 }

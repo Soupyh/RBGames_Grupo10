@@ -19,6 +19,7 @@ import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel
 
 @Composable                                                  // Pantalla Registro conectada al VM
 fun RegisterScreenVm(
+    vm: AuthViewModel,
     onRegisteredNavigateLogin: () -> Unit,                   // Navega a Login si success=true
     onGoLogin: () -> Unit                                    // Botón alternativo para ir a Login
 ) {

@@ -5,8 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.rbgames_grupo1.data.user.UserDao
-import com.example.rbgames_grupo1.data.user.UserEntity
+import com.example.rbgames_grupo1.data.local.users.UserDao
+import com.example.rbgames_grupo1.data.local.users.UserEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,17 +48,17 @@ abstract class AppDatabase: RoomDatabase(){
                                         name = "Admin",
                                         email = "a@a.cl",
                                         phone = "12345678",
-                                        pass = "Admin123!"
+                                        password = "Admin123!"
                                     ),
                                     UserEntity(
                                         name = "Jose",
                                         email = "b@b.cl",
                                         phone = "12345678",
-                                        pass = "Jose123!"
+                                        password = "Jose123!"
                                     )
                                 )
                                 if(dao.count() == 0){
-                                    seed.forEach { dao.insertar(it) }
+                                    seed.forEach { dao.insert(it) }
                                 }
 
                             }

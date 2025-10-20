@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.uinavegacion"
+    namespace = "com.example.rbgames_grupo1"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.uinavegacion"
+        applicationId = "com.example.rbgames_grupo1"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -68,6 +68,6 @@ dependencies {
 
 
     implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-kts:2.6.1")
+    implementation("androidx.room:room-ktx:2.8.1")
     ksp("androidx.room:room-compiler:2.6.1")
 }

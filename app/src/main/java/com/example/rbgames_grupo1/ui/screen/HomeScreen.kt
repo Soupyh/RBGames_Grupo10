@@ -68,7 +68,7 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally // Centrado
                 ) {
                     Text(
-                        "Demostración de navegación con TopBar + Drawer + Botones",
+                        "Inicia sesion para ingresar al catalogo",
                         style = MaterialTheme.typography.titleMedium, // Estilo medio
                         textAlign = TextAlign.Center // Alineación centrada
                     )
