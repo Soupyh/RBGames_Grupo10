@@ -27,7 +27,8 @@ import androidx.compose.ui.unit.dp
 @Composable // Pantalla Home (sin formularios, solo navegación/diseño)
 fun HomeScreen(
     onGoLogin: () -> Unit,   // Acción a Login
-    onGoRegister: () -> Unit // Acción a Registro
+    onGoRegister: () -> Unit, // Acción a Registro
+    onGoProductos: () -> Unit // Acción a Productos
 ) {
     val bg = MaterialTheme.colorScheme.surfaceVariant // Fondo agradable para Home
 
@@ -88,6 +89,7 @@ fun HomeScreen(
             ) {
                 Button(onClick = onGoLogin) { Text("Ir a Login") } // Navega a Login
                 OutlinedButton(onClick = onGoRegister) { Text("Ir a Registro") } // A Registro
+                OutlinedButton(onClick = onGoProductos) { Text("Ir a Productos") } // A Productos
             }
         }
     }

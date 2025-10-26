@@ -36,7 +36,7 @@ fun AppTopBar(
         ),
         title = { // Slot del título
             Text(
-                text = "Demo Navegación Compose", // Título visible
+                text = "", // Título visible
                 style = MaterialTheme.typography.titleLarge, // Estilo grande
                 maxLines = 1,              // asegura una sola línea Int.MAX_VALUE   // permite varias líneas
                 overflow = TextOverflow.Ellipsis // agrega "..." si no cabe

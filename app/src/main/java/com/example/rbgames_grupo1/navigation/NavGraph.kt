@@ -19,7 +19,9 @@ import com.example.rbgames_grupo1.ui.components.AppDrawer
 import com.example.rbgames_grupo1.ui.components.AppTopBar
 import com.example.rbgames_grupo1.ui.components.defaultDrawerItems
 import com.example.rbgames_grupo1.ui.screen.HomeScreen
+import com.example.rbgames_grupo1.ui.screen.Juego
 import com.example.rbgames_grupo1.ui.screen.LoginScreenVm
+import com.example.rbgames_grupo1.ui.screen.ProductosScreen
 import com.example.rbgames_grupo1.ui.screen.RegisterScreenVm
 import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel
 
@@ -35,6 +37,8 @@ fun AppNavGraph(navController: NavHostController,
     val goHome: () -> Unit    = { navController.navigate(Route.Home.path) }    // Ir a Home
     val goLogin: () -> Unit   = { navController.navigate(Route.Login.path) }   // Ir a Login
     val goRegister: () -> Unit = { navController.navigate(Route.Register.path) } // Ir a Registro
+    val goProductos: () -> Unit = { navController.navigate(Route.Productos.path) } // ir a producto
+
 
     ModalNavigationDrawer( // Capa superior con drawer lateral
         drawerState = drawerState, // Estado del drawer
@@ -76,7 +80,8 @@ fun AppNavGraph(navController: NavHostController,
                 composable(Route.Home.path) { // Destino Home
                     HomeScreen(
                         onGoLogin = goLogin,     // Botón para ir a Login
-                        onGoRegister = goRegister // Botón para ir a Registro
+                        onGoRegister = goRegister, // Botón para ir a Registro
+                        onGoProductos = goProductos // Botón para ir a Productos
                     )
                 }
                 composable(Route.Login.path) { // Destino Login
@@ -95,6 +100,20 @@ fun AppNavGraph(navController: NavHostController,
                         vm = authViewModel,            // <-- NUEVO: pasamos VM inyectado
                         onRegisteredNavigateLogin = goLogin,       // Si el VM marca success=true, volvemos a Login
                         onGoLogin = goLogin                        // Botón alternativo para ir a Login
+                    )
+                }
+                // ⬇⬇⬇ AQUI PEGAS TU BLOQUE DE PRODUCTOS ⬇⬇⬇
+                composable(Route.Productos.path) {
+                    val juegosDemo = listOf(
+                        Juego(
+                            1, "Destiny 2", "Acción RPG en mundo abierto, desafiante y épico.", 44990),
+                        Juego(2, "Gta 5", "Juego de acción y aventuras en mundo abierto.", 62990),
+                        Juego(3, "Left 4 Death 2", "FPS cooperativo de supervivencia.", 19990),
+                        Juego(4, "Payday 2", "FPS de asaltos y coordinación de equipo.", 39990),
+                    )
+                    ProductosScreen(
+                        juegos = juegosDemo,
+                        onAgregarCarrito = { /* TODO: integrar con tu carrito */ }
                     )
                 }
             }

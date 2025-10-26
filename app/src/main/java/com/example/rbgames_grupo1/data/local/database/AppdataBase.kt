@@ -27,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null              // Instancia singleton
-        private const val DB_NAME = "ui_navegacion.db"         // Nombre del archivo .db
+        private const val DB_NAME = "bsd_rbgames"         // Nombre del archivo .db
 
         // Obtiene la instancia única de la base
         fun getInstance(context: Context): AppDatabase {
@@ -51,15 +51,15 @@ abstract class AppDatabase : RoomDatabase() {
                                 val seed = listOf(
                                     UserEntity(
                                         name = "Admin",
-                                        email = "admin@duoc.cl",
+                                        email = "a@a.cl",
                                         phone = "+56911111111",
                                         password = "Admin123!"
                                     ),
                                     UserEntity(
-                                        name = "Víctor Rosendo",
-                                        email = "victor@duoc.cl",
+                                        name = "Benjamin Leal",
+                                        email = "benjamin@a.cl",
                                         phone = "+56922222222",
-                                        password = "123456"
+                                        password = "Benjamin123!"
                                     )
                                 )
 
