@@ -64,7 +64,7 @@ private fun LoginScreen(
     onSubmit: () -> Unit,                                    // Acción enviar
     onGoRegister: () -> Unit                                 // Acción ir a registro
 ) {
-    val bg = MaterialTheme.colorScheme.secondaryContainer // Fondo distinto para contraste
+    val bg = MaterialTheme.colorScheme.surface
     //4 Agregamos la siguiente linea
     var showPass by remember { mutableStateOf(false) }        // Estado local para mostrar/ocultar contraseña
 
