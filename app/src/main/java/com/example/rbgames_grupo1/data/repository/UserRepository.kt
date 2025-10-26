@@ -1,15 +1,14 @@
 package com.example.rbgames_grupo1.data.repository
 
-
 import com.example.rbgames_grupo1.data.local.users.UserDao
 import com.example.rbgames_grupo1.data.local.users.UserEntity
-import java.lang.IllegalArgumentException
-import kotlin.text.insert
 
 
-class UserRepository (
-    private val userDao: UserDao
-){
+// Repositorio: orquesta reglas de negocio para login/registro sobre el DAO.
+class UserRepository(
+    private val userDao: UserDao // Inyección del DAO
+) {
+
     // Login: busca por email y valida contraseña
     suspend fun login(email: String, password: String): Result<UserEntity> {
         val user = userDao.getByEmail(email)                         // Busca usuario
@@ -36,5 +35,4 @@ class UserRepository (
         )
         return Result.success(id)                                    // Devuelve ID generado
     }
-
 }

@@ -11,64 +11,72 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+// @Database registra entidades y versión del esquema.
+// version = 1: como es primera inclusión con teléfono, partimos en 1.
 
 @Database(
     entities = [UserEntity::class],
     version = 1,
-    exportSchema = true
+    exportSchema = true // Mantener true para inspección de esquema (útil en educación)
 )
-abstract class AppDatabase: RoomDatabase(){
-    //exponer los dao de las tablas con registros por defecto
+abstract class AppDatabase : RoomDatabase() {
+
+    // Exponemos el DAO de usuarios
     abstract fun userDao(): UserDao
 
-    companion object{
+    companion object {
         @Volatile
-        private var INSTANCE: AppDatabase? = null
-        private const val DB_NAME = "ui_navegacion.db"
+        private var INSTANCE: AppDatabase? = null              // Instancia singleton
+        private const val DB_NAME = "ui_navegacion.db"         // Nombre del archivo .db
 
-        //obtener la instancia de la BD
-        fun getInstance(context: Context): AppDatabase{
-            return INSTANCE ?: synchronized(this){
-                //instancias auxiliar para crear la BD
-                var instance = Room.databaseBuilder(
+        // Obtiene la instancia única de la base
+        fun getInstance(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                // Construimos la DB con callback de precarga
+                val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     DB_NAME
                 )
-                    .addCallback(object : RoomDatabase.Callback(){
+                    // Callback para ejecutar cuando la DB se crea por primera vez
+                    .addCallback(object : RoomDatabase.Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
-                            //lanzar una corutina para los insert de las tablas
+                            // Lanzamos una corrutina en IO para insertar datos iniciales
                             CoroutineScope(Dispatchers.IO).launch {
-                                //repetir por cada tabla con insert
                                 val dao = getInstance(context).userDao()
-                                //genero la lista de los insert
+
+                                // Precarga de usuarios (incluye teléfono)
+                                // Reemplaza aquí por los mismitos datos que usas en Login/Register.
                                 val seed = listOf(
                                     UserEntity(
                                         name = "Admin",
-                                        email = "a@a.cl",
-                                        phone = "12345678",
+                                        email = "admin@duoc.cl",
+                                        phone = "+56911111111",
                                         password = "Admin123!"
                                     ),
                                     UserEntity(
-                                        name = "Jose",
-                                        email = "b@b.cl",
-                                        phone = "12345678",
-                                        password = "Jose123!"
+                                        name = "Víctor Rosendo",
+                                        email = "victor@duoc.cl",
+                                        phone = "+56922222222",
+                                        password = "123456"
                                     )
                                 )
-                                if(dao.count() == 0){
+
+                                // Inserta seed sólo si la tabla está vacía
+                                if (dao.count() == 0) {
                                     seed.forEach { dao.insert(it) }
                                 }
-
                             }
                         }
-                    }).fallbackToDestructiveMigration()
+                    })
+                    // En entorno educativo, si cambias versión sin migraciones, destruye y recrea.
+                    .fallbackToDestructiveMigration()
                     .build()
-                INSTANCE = instance
-                instance
+
+                INSTANCE = instance                             // Guarda la instancia
+                instance                                        // Devuelve la instancia
             }
         }
-
     }
 }
