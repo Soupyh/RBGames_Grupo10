@@ -1,119 +1,140 @@
 package com.example.rbgames_grupo1.navigation
 
-import androidx.compose.foundation.layout.padding // Para aplicar innerPadding
-import androidx.compose.material3.Scaffold // Estructura base con slots
-import androidx.compose.runtime.Composable // Marcador composable
-import androidx.compose.ui.Modifier // Modificador
-import androidx.navigation.NavHostController // Controlador de navegación
-import androidx.navigation.compose.NavHost // Contenedor de destinos
-import androidx.navigation.compose.composable // Declarar cada destino
-import kotlinx.coroutines.launch // Para abrir/cerrar drawer con corrutinas
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.VideogameAsset
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import kotlinx.coroutines.launch
 
-import androidx.compose.material3.ModalNavigationDrawer // Drawer lateral modal
-import androidx.compose.material3.rememberDrawerState // Estado del drawer
-import androidx.compose.material3.DrawerValue // Valores (Opened/Closed)
-import androidx.compose.runtime.rememberCoroutineScope // Alcance de corrutina
-
-
+import com.example.rbgames_grupo1.ui.components.AppBottomBar
 import com.example.rbgames_grupo1.ui.components.AppDrawer
-import com.example.rbgames_grupo1.ui.components.AppTopBar
+import com.example.rbgames_grupo1.ui.components.BottomItem
 import com.example.rbgames_grupo1.ui.components.defaultDrawerItems
 import com.example.rbgames_grupo1.ui.screen.HomeScreen
-import com.example.rbgames_grupo1.ui.screen.Juego
-import com.example.rbgames_grupo1.ui.screen.LoginScreenVm
 import com.example.rbgames_grupo1.ui.screen.ProductosScreen
+import com.example.rbgames_grupo1.ui.screen.LoginScreenVm
 import com.example.rbgames_grupo1.ui.screen.RegisterScreenVm
 import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel
 
-@Composable // Gráfico de navegación + Drawer + Scaffold
-fun AppNavGraph(navController: NavHostController,
-                authViewModel: AuthViewModel        // <-- 1.- NUEVO: recibimos el VM inyectado desde MainActivity
-) { // Recibe el controlador
+@Composable
+fun AppNavGraph(
+    navController: NavHostController,
+    authViewModel: AuthViewModel
+) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed) // Estado del drawer
-    val scope = rememberCoroutineScope() // Necesario para abrir/cerrar drawer
+    // Helpers de navegación (usan el mismo route del NavHost)
+    val goHome: () -> Unit = {
+        navController.navigate(Route.Home.path) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+    val goLogin: () -> Unit = {
+        navController.navigate(Route.Login.path) {
+            launchSingleTop = true
+        }
+    }
+    val goRegister: () -> Unit = {
+        navController.navigate(Route.Register.path) {
+            launchSingleTop = true
+        }
+    }
+    val goProductos: () -> Unit = {
+        navController.navigate(Route.Productos.path) {
+            popUpTo(navController.graph.startDestinationId) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
 
-    // Helpers de navegación (reutilizamos en topbar/drawer/botones)
-    val goHome: () -> Unit    = { navController.navigate(Route.Home.path) }    // Ir a Home
-    val goLogin: () -> Unit   = { navController.navigate(Route.Login.path) }   // Ir a Login
-    val goRegister: () -> Unit = { navController.navigate(Route.Register.path) } // Ir a Registro
-    val goProductos: () -> Unit = { navController.navigate(Route.Productos.path) } // ir a producto
-
-
-    ModalNavigationDrawer( // Capa superior con drawer lateral
-        drawerState = drawerState, // Estado del drawer
-        drawerContent = { // Contenido del drawer (menú)
-            AppDrawer( // Nuestro componente Drawer
-                currentRoute = null, // Puedes pasar navController.currentBackStackEntry?.destination?.route
-                items = defaultDrawerItems( // Lista estándar
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            AppDrawer(
+                currentRoute = null, // opcional: navController.currentBackStackEntry?.destination?.route
+                items = defaultDrawerItems(
                     onHome = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goHome() // Navega a Home
+                        scope.launch { drawerState.close() }
+                        goHome()
                     },
                     onLogin = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goLogin() // Navega a Login
+                        scope.launch { drawerState.close() }
+                        goLogin()
                     },
                     onRegister = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goRegister() // Navega a Registro
+                        scope.launch { drawerState.close() }
+                        goRegister()
                     }
                 )
             )
         }
     ) {
-        Scaffold( // Estructura base de pantalla
-            topBar = { // Barra superior con íconos/menú
-                AppTopBar(
-                    onOpenDrawer = { scope.launch { drawerState.open() } }, // Abre drawer
-                    onHome = goHome,     // Botón Home
-                    onLogin = goLogin,   // Botón Login
-                    onRegister = goRegister // Botón Registro
+        Scaffold(
+            bottomBar = {
+                // 👇 Usamos EXACTAMENTE las rutas del NavHost
+                AppBottomBar(
+                    navController = navController,
+                    items = listOf(
+                        BottomItem(
+                            route = Route.Home.path,     // "home" (ejemplo)
+                            label = "Inicio",
+                            icon = Icons.Filled.Home
+                        ),
+                        BottomItem(
+                            route = Route.Productos.path, // Aquí va la pestaña "Juegos"
+                            label = "Juegos",
+                            icon = Icons.Filled.VideogameAsset
+                        ),
+                    )
                 )
             }
-        ) { innerPadding -> // Padding que evita solapar contenido
-            NavHost( // Contenedor de destinos navegables
-                navController = navController, // Controlador
-                startDestination = Route.Home.path, // Inicio: Home
-                modifier = Modifier.padding(innerPadding) // Respeta topBar
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = Route.Home.path,
+                modifier = Modifier.padding(innerPadding)
             ) {
-                composable(Route.Home.path) { // Destino Home
+                composable(Route.Home.path) {
                     HomeScreen(
-                        onGoLogin = goLogin,     // Botón para ir a Login
-                        onGoRegister = goRegister, // Botón para ir a Registro
-                        onGoProductos = goProductos // Botón para ir a Productos
+                        onGoLogin = goLogin,
+                        onGoRegister = goRegister,
+                        onGoProductos = goProductos
                     )
                 }
-                composable(Route.Login.path) { // Destino Login
-                    //1 modificamos el acceso a la pagina
-                    // Usamos la versión con ViewModel (LoginScreenVm) para formularios/validación en tiempo real
+                composable(Route.Login.path) {
                     LoginScreenVm(
-                        vm = authViewModel,            // <-- NUEVO: pasamos VM inyectado
-                        onLoginOkNavigateHome = goHome,            // Si el VM marca success=true, navegamos a Home
-                        onGoRegister = goRegister                  // Enlace para ir a la pantalla de Registro
+                        vm = authViewModel,
+                        onLoginOkNavigateHome = goHome,
+                        onGoRegister = goRegister
                     )
                 }
-                composable(Route.Register.path) { // Destino Registro
-                    //2 modificamos el acceso a la pagina
-                    // Usamos la versión con ViewModel (RegisterScreenVm) para formularios/validación en tiempo real
+                composable(Route.Register.path) {
                     RegisterScreenVm(
-                        vm = authViewModel,            // <-- NUEVO: pasamos VM inyectado
-                        onRegisteredNavigateLogin = goLogin,       // Si el VM marca success=true, volvemos a Login
-                        onGoLogin = goLogin                        // Botón alternativo para ir a Login
+                        vm = authViewModel,
+                        onRegisteredNavigateLogin = goLogin,
+                        onGoLogin = goLogin
                     )
                 }
-                // ⬇⬇⬇ AQUI PEGAS TU BLOQUE DE PRODUCTOS ⬇⬇⬇
+                // Pestaña "Juegos" -> usamos tu ProductosScreen
                 composable(Route.Productos.path) {
-                    val juegosDemo = listOf(
-                        Juego(
-                            1, "Destiny 2", "Acción RPG en mundo abierto, desafiante y épico.", 44990),
-                        Juego(2, "Gta 5", "Juego de acción y aventuras en mundo abierto.", 62990),
-                        Juego(3, "Left 4 Death 2", "FPS cooperativo de supervivencia.", 19990),
-                        Juego(4, "Payday 2", "FPS de asaltos y coordinación de equipo.", 39990),
-                    )
+                    // Si necesitas un demo local, define aquí tu lista de productos/juegos.
+                    // Evitamos usar un nombre 'Juego' que choque con Composables.
                     ProductosScreen(
-                        juegos = juegosDemo,
-                        onAgregarCarrito = { /* TODO: integrar con tu carrito */ }
+                        juegos = emptyList(), // Cárgalos desde tu VM o repo
+                        onAgregarCarrito = { /* TODO integrar carrito */ }
                     )
                 }
             }
