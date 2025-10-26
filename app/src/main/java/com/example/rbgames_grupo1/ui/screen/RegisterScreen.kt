@@ -83,7 +83,7 @@ private fun RegisterScreen(
     onSubmit: () -> Unit,                                    // Acción Registrar
     onGoLogin: () -> Unit                                    // Ir a Login
 ) {
-    val bg = MaterialTheme.colorScheme.surface
+    val bg = MaterialTheme.colorScheme.surfaceVariant
     //4 Anexamos las variables para mostrar y ocultar el password
     var showPass by remember { mutableStateOf(false) }        // Mostrar/ocultar password
     var showConfirm by remember { mutableStateOf(false) }     // Mostrar/ocultar confirm

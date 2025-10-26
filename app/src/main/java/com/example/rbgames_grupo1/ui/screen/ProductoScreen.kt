@@ -116,6 +116,18 @@ fun ProductosScreen(
     }
 }
 
+// ---------- Route para usar en NavGraph ----------
+@Composable
+fun ProductosRoute(
+    onAgregarCarrito: (Juego) -> Unit
+) {
+    // Por ahora reutilizamos los mismos datos del preview
+    ProductosScreen(
+        juegos = demoJuegos,
+        onAgregarCarrito = onAgregarCarrito
+    )
+}
+
 // ---Preview de los juego---
 private val demoJuegos = listOf(
     Juego(1, "Destiny 2", "Acción RPG en mundo abierto, desafiante y épico.", 44990),
