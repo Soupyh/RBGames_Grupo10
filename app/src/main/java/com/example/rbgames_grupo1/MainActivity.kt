@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
@@ -21,9 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            AppRoot()
-        }
+        setContent { AppRoot() }
     }
 }
 
@@ -31,25 +30,19 @@ class MainActivity : ComponentActivity() {
 fun AppRoot() {
     val context = LocalContext.current.applicationContext
 
-    val db = AppDatabase.getInstance(context)
+    val db = remember{ AppDatabase.getInstance(context) }
+    val userRepository = remember { UserRepository(db.userDao()) }
 
-    val userDao = db.userDao()
-
-    val userRepository = UserRepository(userDao)
-
-    val authViewModel: AuthViewModel = viewModel(
-        factory = AuthViewModelFactory(userRepository)
-    )
-
+    val authViewModel: AuthViewModel = viewModel(factory = AuthViewModelFactory(userRepository))
     val navController = rememberNavController()
-    MaterialTheme{
-        Surface(color = MaterialTheme.colorScheme.background) {
+
+
+    RBGames_Grupo1Theme {
+        Surface {
             AppNavGraph(
                 navController = navController,
-                authViewModel = authViewModel // <-- NUEVO parámetro
+                authViewModel = authViewModel
             )
         }
     }
-
-
 }

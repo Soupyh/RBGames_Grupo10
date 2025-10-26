@@ -23,7 +23,6 @@ fun RegisterScreenVm(
     onRegisteredNavigateLogin: () -> Unit,                   // Navega a Login si success=true
     onGoLogin: () -> Unit                                    // Botón alternativo para ir a Login
 ) {
-    val vm: AuthViewModel = viewModel()                      // Crea/obtiene VM
     val state by vm.register.collectAsStateWithLifecycle()   // Observa estado en tiempo real
 
     if (state.success) {                                     // Si registro fue exitoso

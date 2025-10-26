@@ -25,7 +25,6 @@ fun LoginScreenVm(
     onLoginOkNavigateHome: () -> Unit,                       // Navega a Home cuando el login es exitoso
     onGoRegister: () -> Unit                                 // Navega a Registro
 ) {
-    val vm: AuthViewModel = viewModel()                      // Crea/obtiene VM
     val state by vm.login.collectAsStateWithLifecycle()      // Observa el StateFlow en tiempo real
 
     if (state.success) {                                     // Si login fue exitoso…
