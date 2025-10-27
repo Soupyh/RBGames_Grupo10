@@ -1,95 +1,75 @@
 package com.example.rbgames_grupo1.ui.screen
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-@Composable // Pantalla Home (sin formularios, solo navegación/diseño)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun HomeScreen(
-    onGoLogin: () -> Unit,   // Acción a Login
-    onGoRegister: () -> Unit, // Acción a Registro
-    onGoProductos: () -> Unit // Acción a Productos
+    onGoLogin: () -> Unit,
+    onGoRegister: () -> Unit,
+    onGoProductos: () -> Unit
 ) {
-    val bg = MaterialTheme.colorScheme.surfaceVariant // Fondo agradable para Home
+    val juegosDemo = listOf(
+        Juego(1, "Destiny 2", "Acción RPG en mundo abierto, desafiante y épico.", 44_990),
+        Juego(2, "Gta 5", "Juego de acción y aventuras en mundo abierto.", 62_990),
+        Juego(3, "Left 4 Death 2", "Juego de disparos en primera persona.", 19_990),
+        Juego(4, "Payday 2", "Juego de disparos en primera persona y asaltos.", 39_990),
+    )
 
-    Box( // Contenedor a pantalla completa
-        modifier = Modifier
-            .fillMaxSize() // Ocupa todo
-            .background(bg) // Aplica fondo
-            .padding(16.dp), // Margen interior
-        contentAlignment = Alignment.Center // Centra contenido
-    ) {
-        Column( // Estructura vertical
-            horizontalAlignment = Alignment.CenterHorizontally // Centra hijos
+    androidx.compose.material3.Scaffold(
+        topBar = {
+            androidx.compose.material3.TopAppBar(
+                title = { Text("RB Games", fontWeight = FontWeight.SemiBold) }
+            )
+        },
+
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = onGoProductos,
+                icon = { Icon(Icons.Default.Add, "Añadir juego") },
+                text = { Text("Añadir un juego") }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // Cabecera como Row (ejemplo de estructura)
-            Row(
-                verticalAlignment = Alignment.CenterVertically // Centra vertical
-            ) {
-                Text( // Título Home
-                    text = "Home",
-                    style = MaterialTheme.typography.headlineSmall, // Estilo título
-                    fontWeight = FontWeight.SemiBold // Seminegrita
-                )
-                Spacer(Modifier.width(8.dp)) // Separación horizontal
-                AssistChip( // Chip decorativo (Material 3)
-                    onClick = {}, // Sin acción (demo)
-                    label = { Text("Navega desde arriba o aquí") } // Texto chip
-                )
-            }
+            Text("Catálogo de juegos",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(8.dp))
 
-            Spacer(Modifier.height(20.dp)) // Separación
-
-            // Tarjeta con un mini “hero”
-            ElevatedCard( // Card elevada para remarcar contenido
-                modifier = Modifier.fillMaxWidth() // Ancho completo
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 160.dp),
+                contentPadding = PaddingValues(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxSize()
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp), // Margen interno de la card
-                    horizontalAlignment = Alignment.CenterHorizontally // Centrado
-                ) {
-                    Text(
-                        "Inicia sesion para ingresar al catalogo",
-                        style = MaterialTheme.typography.titleMedium, // Estilo medio
-                        textAlign = TextAlign.Center // Alineación centrada
-                    )
-                    Spacer(Modifier.height(12.dp)) // Separación
-                    Text(
-                        "Usa la barra superior (íconos y menú), el menú lateral o estos botones.",
-                        style = MaterialTheme.typography.bodyMedium // Texto base
-                    )
+                items(juegosDemo, key = { it.id }) { juego ->
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(juego.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(juego.descripcion, style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.height(8.dp))
+
+                        }
+                    }
                 }
-            }
-
-            Spacer(Modifier.height(24.dp)) // Separación
-
-            // Botones de navegación principales
-            Row( // Dos botones en fila
-                horizontalArrangement = Arrangement.spacedBy(12.dp) // Espacio entre botones
-            ) {
-                Button(onClick = onGoLogin) { Text("Ir a Login") } // Navega a Login
-                OutlinedButton(onClick = onGoRegister) { Text("Ir a Registro") } // A Registro
-                OutlinedButton(onClick = onGoProductos) { Text("Ir a Productos") } // A Productos
             }
         }
     }
