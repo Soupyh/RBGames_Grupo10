@@ -4,7 +4,9 @@ package com.example.rbgames_grupo1.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Login
 import androidx.compose.material.icons.filled.VideogameAsset
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -32,6 +34,7 @@ import com.example.rbgames_grupo1.ui.screen.RegisterScreenVm
 import com.example.rbgames_grupo1.ui.screen.HomeScreen
 import com.example.rbgames_grupo1.ui.screen.ProductosScreen
 import com.example.rbgames_grupo1.ui.screen.Juego // data class usada para la lista de productos
+import com.example.rbgames_grupo1.ui.screen.CarritoScreen // ⬅️ NUEVO
 
 // ViewModel
 import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel
@@ -42,6 +45,7 @@ object Routes {
     const val Register = "register"
     const val Home = "home"
     const val Productos = "productos"
+    const val Carrito = "carrito" // ⬅️ NUEVO
 }
 
 @Composable
@@ -54,8 +58,10 @@ fun AppNavGraph(
 
     // Items del BottomBar (solo en secciones principales)
     val bottomItems = listOf(
-        BottomItem(route = Routes.Home,      label = "Inicio", icon = Icons.Filled.Home),
-        BottomItem(route = Routes.Productos, label = "Juegos", icon = Icons.Filled.VideogameAsset)
+        BottomItem(route = Routes.Home,      label = "Inicio",  icon = Icons.Filled.Home),
+        BottomItem(route = Routes.Productos, label = "Juegos",  icon = Icons.Filled.VideogameAsset),
+        BottomItem(route = Routes.Carrito,   label = "Carrito", icon = Icons.Filled.ShoppingCart), // ⬅️ NUEVO
+        BottomItem(route = Routes.Login,     label = "Login",   icon = Icons.Filled.Login)
     )
 
     // Ruta actual (null-safe y sin args)
@@ -63,7 +69,7 @@ fun AppNavGraph(
     val currentRoute: String? = backStackEntry?.destination?.route?.substringBefore("?")
 
     // Mostrar BottomBar solo en estas pantallas
-    val showBottomBar = currentRoute in setOf(Routes.Home, Routes.Productos)
+    val showBottomBar = currentRoute in setOf(Routes.Home, Routes.Productos, Routes.Carrito) // ⬅️ incluye Carrito
 
     // Helper para navegar conservando estado y marcando correctamente la pestaña
     fun navigateSingleTop(route: String) {
@@ -100,6 +106,7 @@ fun AppNavGraph(
                         }
                         scope.launch { drawerState.close() }
                     }
+                    // Si quieres añadir Carrito al Drawer, puedo extender defaultDrawerItems.
                 )
             )
         }
@@ -107,7 +114,6 @@ fun AppNavGraph(
         Scaffold(
             bottomBar = {
                 if (showBottomBar) {
-                    // Tu AppBottomBar ya navega con el navController internamente
                     AppBottomBar(
                         navController = navController,
                         items = bottomItems
@@ -117,8 +123,7 @@ fun AppNavGraph(
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                // ⬇️ Arrancamos en Home como pediste
-                startDestination = Routes.Home,
+                startDestination = Routes.Home, // Arranca en Home
                 modifier = Modifier.padding(innerPadding)
             ) {
                 // ---------- LOGIN ----------
@@ -131,7 +136,6 @@ fun AppNavGraph(
                             }
                         },
                         onLoginOkNavigateHome = {
-                            // Navega a Home y saca Login del back stack
                             navController.navigate(Routes.Home) {
                                 popUpTo(Routes.Login) { inclusive = true }
                                 launchSingleTop = true
@@ -149,7 +153,6 @@ fun AppNavGraph(
                             navController.navigate(Routes.Login) { launchSingleTop = true }
                         },
                         onRegisteredNavigateLogin = {
-                            // Vuelve a Login limpiando Register
                             navController.navigate(Routes.Login) {
                                 popUpTo(Routes.Register) { inclusive = true }
                                 launchSingleTop = true
@@ -168,7 +171,6 @@ fun AppNavGraph(
                             navController.navigate(Routes.Register) { launchSingleTop = true }
                         },
                         onGoProductos = {
-                            // Al tocar "Añadir" en Home te lleva al apartado de Juegos
                             navigateSingleTop(Routes.Productos)
                         }
                     )
@@ -176,7 +178,7 @@ fun AppNavGraph(
 
                 // ---------- PRODUCTOS (con BottomBar visible) ----------
                 composable(Routes.Productos) {
-                    // Lista local (demo, porque demoJuegos es private en tu ProductoScreen.kt)
+                    // Lista local (demo)
                     val juegos = listOf(
                         Juego(1, "Destiny 2", "Acción RPG en mundo abierto, desafiante y épico.", 44990),
                         Juego(2, "Gta 5", "Juego de acción y aventuras en mundo abierto.", 62990),
@@ -186,7 +188,20 @@ fun AppNavGraph(
 
                     ProductosScreen(
                         juegos = juegos,
-                        onAgregarCarrito = { /* conecta a tu VM si quieres */ }
+                        onAgregarCarrito = {
+                            // Al añadir, vamos al carrito
+                            navigateSingleTop(Routes.Carrito) // ⬅️ NUEVO
+                        }
+                    )
+                }
+
+                // ---------- CARRITO (con BottomBar visible) ----------
+                composable(Routes.Carrito) {
+                    CarritoScreen(
+                        onCheckout = { total ->
+                            // TODO: Navegar a pantalla de pago o mostrar diálogo de confirmación
+                            // navController.navigate("pago?monto=$total")
+                        }
                     )
                 }
             }
