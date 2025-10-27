@@ -29,25 +29,28 @@ import com.example.rbgames_grupo1.ui.viewmodel.CartItem
 import java.text.NumberFormat
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarritoScreen(
     vm: CarritoViewModel = viewModel(),
-    onCheckout: (totalCLP: Int) -> Unit = {},
+    onCheckout: (totalCLP: Int) -> Unit = {}
 ) {
     val items by vm.items.collectAsStateWithLifecycle()
     val total by vm.total.collectAsStateWithLifecycle(initialValue = 0)
 
+    var showResumen by remember { mutableStateOf(false) }  // ⬅️ controla el detalle de venta
+
     Scaffold(
         bottomBar = {
-            Summary(
+            SummaryBar(
                 total = total,
-                onPagar = { if (total > 0) onCheckout(total) },
+                onPagar = { if (total > 0) showResumen = true },  // ⬅️ abre detalle
                 enabled = total > 0
             )
         }
     ) { inner ->
         if (items.isEmpty()) {
-            EmptyCartStateNoTop(Modifier.padding(inner))
+            EmptyCartState(Modifier.padding(inner))
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -56,32 +59,43 @@ fun CarritoScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item {
-                    Text(
-                        text = "Carrito",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-
                 items(items, key = { it.id }) { item ->
-                    CartItem(
+                    CartItemRow(
                         item = item,
                         onIncrement = { vm.increment(item.id) },
                         onDecrement = { vm.decrement(item.id) },
                         onRemove = { vm.remove(item.id) }
                     )
                 }
-
-                item { Spacer(Modifier.height(84.dp)) } // espacio para no tapar con bottom bar
+                item { Spacer(Modifier.height(84.dp)) }
             }
+        }
+    }
+
+    // --------- DETALLE DE VENTA (Modal Bottom Sheet) ----------
+    if (showResumen) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showResumen = false },
+            sheetState = sheetState
+        ) {
+            ResumenVentaContent(
+                items = items,
+                total = total,
+                onConfirmar = {
+                    showResumen = false
+                    onCheckout(total)   // ⬅️ notifica hacia afuera (navegar/guardar venta)
+                },
+                onCancelar = { showResumen = false }
+            )
         }
     }
 }
 
+// ------------------ UI: Fila de item ------------------
+
 @Composable
-private fun CartItem(
+private fun CartItemRow(
     item: CartItem,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
@@ -115,15 +129,14 @@ private fun CartItem(
                     Spacer(Modifier.width(12.dp))
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(Modifier.weight(1f)) {
                     Text(
                         item.nombre,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = clpNoTop(item.precio),
+                        text = clp(item.precio),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -132,30 +145,19 @@ private fun CartItem(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedIconButton(
-                            onClick = onDecrement,
-                            enabled = item.cantidad > 1
-                        ) { Icon(Icons.Filled.Remove, contentDescription = "Disminuir") }
-
+                        OutlinedIconButton(onClick = onDecrement, enabled = item.cantidad > 1) {
+                            Icon(Icons.Filled.Remove, contentDescription = "Disminuir")
+                        }
                         Text("${item.cantidad}", style = MaterialTheme.typography.titleMedium)
-
                         OutlinedIconButton(onClick = onIncrement) {
                             Icon(Icons.Filled.Add, contentDescription = "Aumentar")
                         }
-
                         Spacer(Modifier.weight(1f))
-
-                        Text(
-                            text = clpNoTop(item.subtotal),
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        Text(clp(item.subtotal), style = MaterialTheme.typography.titleMedium)
                     }
                 }
 
-                IconButton(onClick = {
-                    visible = false
-                    onRemove()
-                }) {
+                IconButton(onClick = { visible = false; onRemove() }) {
                     Icon(Icons.Filled.Delete, contentDescription = "Eliminar")
                 }
             }
@@ -163,8 +165,10 @@ private fun CartItem(
     }
 }
 
+// ------------------ UI: Barra inferior ------------------
+
 @Composable
-private fun Summary(
+private fun SummaryBar(
     total: Int,
     onPagar: () -> Unit,
     enabled: Boolean
@@ -179,26 +183,23 @@ private fun Summary(
             Column(Modifier.weight(1f)) {
                 Text("Total", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    clpNoTop(total),
+                    clp(total),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
             }
-            Button(
-                onClick = onPagar,
-                enabled = enabled,
-                shape = RoundedCornerShape(12.dp)
-            ) { Text(if (enabled) "Pagar" else "Carrito vacío") }
+            Button(onClick = onPagar, enabled = enabled, shape = RoundedCornerShape(12.dp)) {
+                Text(if (enabled) "Pagar" else "Carrito vacío")
+            }
         }
     }
 }
 
+// ------------------ UI: Estado vacío ------------------
+
 @Composable
-private fun EmptyCartStateNoTop(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+private fun EmptyCartState(modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Tu carrito está vacío", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(6.dp))
@@ -210,5 +211,75 @@ private fun EmptyCartStateNoTop(modifier: Modifier = Modifier) {
     }
 }
 
-private fun clpNoTop(value: Int): String =
+// ------------------ UI: Contenido del Detalle de Venta ------------------
+
+@Composable
+private fun ResumenVentaContent(
+    items: List<CartItem>,
+    total: Int,
+    onConfirmar: () -> Unit,
+    onCancelar: () -> Unit
+) {
+    val iva = (total * 0.19).toInt()         // IVA 19% (opcional, ajusta si no aplica)
+    val neto = total - iva                   // Neto (opcional)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Detalle de la venta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+        // Lista compacta de ítems
+        items.forEach { itx ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("${itx.cantidad}× ${itx.nombre}", modifier = Modifier.weight(1f))
+                Text(clp(itx.subtotal), fontWeight = FontWeight.SemiBold)
+            }
+        }
+
+        Divider()
+
+        // Totales (opcional con IVA)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Neto", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(clp(neto))
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("IVA (19%)", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(clp(iva))
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Total", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
+            Text(clp(total), fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onCancelar,
+                modifier = Modifier.weight(1f)
+            ) { Text("Cancelar") }
+
+            Button(
+                onClick = onConfirmar,
+                modifier = Modifier.weight(1f)
+            ) { Text("Confirmar compra") }
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+// ------------------ Util ------------------
+
+private fun clp(value: Int): String =
     NumberFormat.getCurrencyInstance(Locale("es", "CL")).format(value)

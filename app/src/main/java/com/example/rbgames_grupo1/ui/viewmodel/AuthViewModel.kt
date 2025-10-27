@@ -14,7 +14,6 @@ import com.example.rbgames_grupo1.domain.validation.validateNameLettersOnly
 import com.example.rbgames_grupo1.domain.validation.validatePhoneDigitsOnly
 import com.example.rbgames_grupo1.domain.validation.validateStrongPassword
 
-
 // ----------------- ESTADOS DE UI (observable con StateFlow) -----------------
 
 data class LoginUiState(                                   // Estado de la pantalla Login
@@ -47,27 +46,63 @@ data class RegisterUiState(                                // Estado de la panta
     val errorMsg: String? = null                           // Error global (ej: duplicado)
 )
 
+// ----------------- SESIÓN Y PERFIL -----------------
+
+data class UserProfile(
+    val nombre: String = "",
+    val email: String = "",
+    val telefono: String = ""
+)
+
+data class SessionState(
+    val isLoggedIn: Boolean = false,
+    val user: UserProfile? = null
+)
+
 // ----------------- COLECCIÓN EN MEMORIA (solo para la demo) -----------------
 
-// Modelo mínimo de usuario para la colección
-private data class DemoUser(                               // Datos que vamos a guardar en la colección
-    val name: String,                                      // Nombre
-    val email: String,                                     // Email (lo usamos como “id”)
-    val phone: String,                                     // Teléfono
-    val pass: String                                       // Contraseña en texto (solo demo; no producción)
+// Modelo mínimo de usuario para la colección (no se expone)
+private data class DemoUser(
+    val name: String,
+    val email: String,
+    val phone: String,
+    val pass: String
 )
 
 class AuthViewModel(
     private val repository: UserRepository
-) : ViewModel() {                         // ViewModel que maneja Login/Registro
+) : ViewModel() { // ViewModel que maneja Login/Registro + Sesión/Perfil
 
     // --- Flujos de estado para observar desde la UI ---
     private val _login = MutableStateFlow(LoginUiState())
-    val login: StateFlow<LoginUiState> = _login // CORREGIDO: Tipo de dato correcto
+    val login: StateFlow<LoginUiState> = _login
 
     private val _register = MutableStateFlow(RegisterUiState())
-    val register: StateFlow<RegisterUiState> = _register // CORREGIDO: Tipo de dato correcto
+    val register: StateFlow<RegisterUiState> = _register
 
+    // --- Sesión/Perfil (nuevo) ---
+    private val _session = MutableStateFlow(SessionState())
+    val session: StateFlow<SessionState> = _session
+
+    // ----------------- API de sesión/perfil (nuevo) -----------------
+
+    /** Marca sesión iniciada con un perfil. */
+    fun setLoggedIn(profile: UserProfile) {
+        _session.value = SessionState(isLoggedIn = true, user = profile)
+    }
+
+    /** Actualiza campos del perfil en memoria (y aquí puedes disparar update remoto si tienes backend). */
+    fun updateProfile(nombre: String, email: String, telefono: String) {
+        _session.update { s ->
+            s.copy(user = s.user?.copy(nombre = nombre, email = email, telefono = telefono))
+        }
+        // TODO: Si tienes backend, llamar aquí al repositorio para persistir cambios.
+    }
+
+    /** Cierra sesión y limpia el perfil. */
+    fun logout() {
+        _session.value = SessionState(isLoggedIn = false, user = null)
+    }
 
     // ----------------- LOGIN: handlers y envío -----------------
 
@@ -97,13 +132,26 @@ class AuthViewModel(
             // Consulta real a la BD vía repositorio
             val result = repository.login(s.email.trim(), s.pass)
 
-            // Interpreta el resultado y actualiza estado
             _login.update {
                 if (result.isSuccess) {
+                    // --- NUEVO: marca sesión iniciada con perfil básico ---
+                    // Si tienes un endpoint para obtener el perfil, úsalo aquí.
+                    // Por ahora tomamos el email del login y dejamos nombre/teléfono vacíos
+                    // para que el usuario pueda editarlos en AccountScreen.
+                    setLoggedIn(
+                        UserProfile(
+                            nombre = "",
+                            email = s.email.trim(),
+                            telefono = ""
+                        )
+                    )
                     it.copy(isSubmitting = false, success = true, errorMsg = null)
                 } else {
-                    it.copy(isSubmitting = false, success = false,
-                        errorMsg = result.exceptionOrNull()?.message ?: "Error de autenticación")
+                    it.copy(
+                        isSubmitting = false,
+                        success = false,
+                        errorMsg = result.exceptionOrNull()?.message ?: "Error de autenticación"
+                    )
                 }
             }
         }
@@ -112,7 +160,6 @@ class AuthViewModel(
     fun clearLoginResult() {
         _login.update { it.copy(success = false, errorMsg = null) }
     }
-
 
     // ----------------- REGISTRO: handlers y envío -----------------
 
@@ -166,13 +213,16 @@ class AuthViewModel(
                 password = s.pass
             )
 
-            // Interpreta resultado y actualiza estado
             _register.update {
                 if (result.isSuccess) {
+                    // Nota: no auto-logueamos tras registrar (puedes hacerlo si lo deseas).
                     it.copy(isSubmitting = false, success = true, errorMsg = null)
                 } else {
-                    it.copy(isSubmitting = false, success = false,
-                        errorMsg = result.exceptionOrNull()?.message ?: "No se pudo registrar")
+                    it.copy(
+                        isSubmitting = false,
+                        success = false,
+                        errorMsg = result.exceptionOrNull()?.message ?: "No se pudo registrar"
+                    )
                 }
             }
         }
