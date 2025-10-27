@@ -244,6 +244,21 @@ fun AppNavGraph(
                         }
                     )
                 }
+                // ---------- PAGOS ----------
+                composable(Routes.Carrito) {
+                    CarritoScreen(
+                        vm = carritoVm,
+                        onCheckout = { total ->
+                            // guardar venta si quieres
+                        },
+                        onGoHome = {
+                            navController.navigate(Routes.Home) {
+                                popUpTo(Routes.Home) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
             }
         }
     }

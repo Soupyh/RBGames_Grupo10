@@ -7,9 +7,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
@@ -33,18 +35,20 @@ import java.util.Locale
 @Composable
 fun CarritoScreen(
     vm: CarritoViewModel = viewModel(),
-    onCheckout: (totalCLP: Int) -> Unit = {}
+    onCheckout: (totalCLP: Int) -> Unit = {},
+    onGoHome: () -> Unit = {}
 ) {
     val items by vm.items.collectAsStateWithLifecycle()
     val total by vm.total.collectAsStateWithLifecycle(initialValue = 0)
 
-    var showResumen by remember { mutableStateOf(false) }  // ⬅️ controla el detalle de venta
+    var showResumen by remember { mutableStateOf(false) }  // hoja de detalle
+    var showExito  by remember { mutableStateOf(false) }   // diálogo de “Compra exitosa”
 
     Scaffold(
         bottomBar = {
             SummaryBar(
                 total = total,
-                onPagar = { if (total > 0) showResumen = true },  // ⬅️ abre detalle
+                onPagar = { if (total > 0) showResumen = true },
                 enabled = total > 0
             )
         }
@@ -64,7 +68,7 @@ fun CarritoScreen(
                         item = item,
                         onIncrement = { vm.increment(item.id) },
                         onDecrement = { vm.decrement(item.id) },
-                        onRemove = { vm.remove(item.id) }
+                        onRemove   = { vm.remove(item.id) }
                     )
                 }
                 item { Spacer(Modifier.height(84.dp)) }
@@ -84,11 +88,23 @@ fun CarritoScreen(
                 total = total,
                 onConfirmar = {
                     showResumen = false
-                    onCheckout(total)   // ⬅️ notifica hacia afuera (navegar/guardar venta)
+                    onCheckout(total)   // guardar/navegar si quieres
+                    vm.clear()          //  VACÍA EL CARRITO
+                    showExito = true    // muestra diálogo de éxito
                 },
                 onCancelar = { showResumen = false }
             )
         }
+    }
+
+    // --------- DIÁLOGO “COMPRA EXITOSA” ----------
+    if (showExito) {
+        CompraExitosaDialog(
+            onOk = {
+                showExito = false
+                onGoHome()            // NAVEGA A HOME
+            }
+        )
     }
 }
 
@@ -220,7 +236,7 @@ private fun ResumenVentaContent(
     onConfirmar: () -> Unit,
     onCancelar: () -> Unit
 ) {
-    val iva = (total * 0.19).toInt()         // IVA 19% (opcional, ajusta si no aplica)
+    val iva = (total * 0.19).toInt()         // IVA 19% (opcional)
     val neto = total - iva                   // Neto (opcional)
 
     Column(
@@ -231,7 +247,6 @@ private fun ResumenVentaContent(
     ) {
         Text("Detalle de la venta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
-        // Lista compacta de ítems
         items.forEach { itx ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -244,7 +259,6 @@ private fun ResumenVentaContent(
 
         Divider()
 
-        // Totales (opcional con IVA)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("Neto", modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(clp(neto))
@@ -277,6 +291,38 @@ private fun ResumenVentaContent(
 
         Spacer(Modifier.height(24.dp))
     }
+}
+
+// ------------------ Diálogo de Éxito ------------------
+
+@Composable
+private fun CompraExitosaDialog(onOk: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onOk, // al tocar fuera también va a Home
+        icon = {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    modifier = Modifier.padding(8.dp).size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        },
+        title = {
+            Text(
+                "¡Compra exitosa!",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = { Text("TU COMPRA HA SIDO REGISTRADA CORRECTAMENTE.") },
+        confirmButton = { Button(onClick = onOk) { Text("OK") } },
+        shape = RoundedCornerShape(16.dp)
+    )
 }
 
 // ------------------ Util ------------------
