@@ -1,145 +1,179 @@
-package com.example.rbgames_grupo1.navigation // Paquete donde vive este NavGraph
+package com.example.rbgames_grupo1.navigation
 
-// -------- IMPORTS: UI y navegación --------
-import androidx.compose.foundation.layout.padding // Para aplicar el padding del Scaffold al contenido
-import androidx.compose.material.icons.Icons // Contenedor de íconos por defecto
-import androidx.compose.material.icons.filled.Home // Ícono de "Inicio"
-import androidx.compose.material.icons.filled.VideogameAsset // Ícono de "Juegos"
-import androidx.compose.material3.ModalNavigationDrawer // Componente de Drawer lateral modal
-import androidx.compose.material3.DrawerValue // Estados posibles del Drawer (Opened/Closed)
-import androidx.compose.material3.rememberDrawerState // Creador/remember del estado del Drawer
-import androidx.compose.material3.Scaffold // Layout base con slots (topBar, bottomBar, content, etc.)
-import androidx.compose.runtime.Composable // Anotación para funciones composables
-import androidx.compose.runtime.rememberCoroutineScope // Alcance de corrutinas para abrir/cerrar Drawer
-import androidx.compose.ui.Modifier // Modificadores de Compose
-import androidx.navigation.NavHostController // Controlador de navegación
-import androidx.navigation.compose.NavHost // Contenedor de destinos de navegación
-import androidx.navigation.compose.composable // Declaración de cada destino del NavHost
-import kotlinx.coroutines.launch // Para lanzar corrutinas al abrir/cerrar Drawer
+// UI y navegación
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.VideogameAsset
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.launch
 
-// -------- IMPORTS: Componentes propios de tu app --------
-import com.example.rbgames_grupo1.ui.components.AppBottomBar // Tu barra inferior reutilizable
-import com.example.rbgames_grupo1.ui.components.AppDrawer // Tu Drawer personalizado
-import com.example.rbgames_grupo1.ui.components.BottomItem // Data class para items de la bottom bar
-import com.example.rbgames_grupo1.ui.components.defaultDrawerItems // Helper para ítems del Drawer
-import com.example.rbgames_grupo1.ui.screen.HomeScreen // Pantalla de inicio
-import com.example.rbgames_grupo1.ui.screen.ProductosRoute // <<< usamos la Route (no la Screen)
-import com.example.rbgames_grupo1.ui.screen.LoginScreenVm // Pantalla de login conectada a ViewModel
-import com.example.rbgames_grupo1.ui.screen.RegisterScreenVm // Pantalla de registro conectada a ViewModel
-import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel // ViewModel compartido para Login/Registro
+// Componentes propios
+import com.example.rbgames_grupo1.ui.components.AppBottomBar
+import com.example.rbgames_grupo1.ui.components.AppDrawer
+import com.example.rbgames_grupo1.ui.components.BottomItem
+import com.example.rbgames_grupo1.ui.components.defaultDrawerItems
 
-@Composable // Indicamos que esta función construye UI declarativa
+// Pantallas
+import com.example.rbgames_grupo1.ui.screen.LoginScreenVm
+import com.example.rbgames_grupo1.ui.screen.RegisterScreenVm
+import com.example.rbgames_grupo1.ui.screen.HomeScreen
+import com.example.rbgames_grupo1.ui.screen.ProductosScreen
+import com.example.rbgames_grupo1.ui.screen.Juego // data class usada para la lista de productos
+
+// ViewModel
+import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel
+
+// Rutas
+object Routes {
+    const val Login = "login"
+    const val Register = "register"
+    const val Home = "home"
+    const val Productos = "productos"
+}
+
+@Composable
 fun AppNavGraph(
-    navController: NavHostController, // Controlador que permite navegar entre destinos
-    authViewModel: AuthViewModel      // ViewModel inyectado desde MainActivity para auth
+    navController: NavHostController,
+    authViewModel: AuthViewModel
 ) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed) // Estado del Drawer (inicia cerrado)
-    val scope = rememberCoroutineScope() // Alcance de corrutinas para animar abrir/cerrar el Drawer
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    // ---- Helpers de navegación: centralizamos la lógica de navegar a cada ruta ----
-    val goHome: () -> Unit = {
-        navController.navigate(Route.Home.path) {
-            popUpTo(navController.graph.startDestinationId) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
-        }
-    }
-    val goLogin: () -> Unit = {
-        navController.navigate(Route.Login.path) {
-            launchSingleTop = true
-        }
-    }
-    val goRegister: () -> Unit = {
-        navController.navigate(Route.Register.path) {
-            launchSingleTop = true
-        }
-    }
-    val goProductos: () -> Unit = {
-        navController.navigate(Route.Productos.path) {
-            popUpTo(navController.graph.startDestinationId) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
-        }
-    }
+    // Items del BottomBar (solo en secciones principales)
+    val bottomItems = listOf(
+        BottomItem(route = Routes.Home,      label = "Inicio",    icon = Icons.Filled.Home),
+        BottomItem(route = Routes.Productos, label = "Juegos",    icon = Icons.Filled.VideogameAsset)
+    )
 
-    // ---- Capa superior: Drawer lateral modal que envuelve al Scaffold ----
+    // Ruta actual (null-safe y sin args)
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute: String? = backStackEntry?.destination?.route?.substringBefore("?")
+
+    // Mostrar BottomBar solo en estas pantallas
+    val showBottomBar = currentRoute in setOf(Routes.Home, Routes.Productos)
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             AppDrawer(
-                currentRoute = null, // Podrías pasar: navController.currentBackStackEntry?.destination?.route
+                currentRoute = currentRoute,
                 items = defaultDrawerItems(
                     onHome = {
-                        scope.launch { drawerState.close() }
-                        goHome()
+                        navController.navigate(Routes.Home) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     },
                     onLogin = {
-                        scope.launch { drawerState.close() }
-                        goLogin()
+                        navController.navigate(Routes.Login) {
+                            popUpTo(Routes.Login) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     },
                     onRegister = {
-                        scope.launch { drawerState.close() }
-                        goRegister()
+                        navController.navigate(Routes.Register) {
+                            popUpTo(Routes.Register) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             )
         }
     ) {
-        // ---- Layout base de pantalla con bottomBar y contenido ----
         Scaffold(
             bottomBar = {
-                AppBottomBar(
-                    navController = navController,
-                    items = listOf(
-                        BottomItem(
-                            route = Route.Home.path,
-                            label = "Inicio",
-                            icon = Icons.Filled.Home
-                        ),
-                        BottomItem(
-                            route = Route.Productos.path,
-                            label = "Juegos",
-                            icon = Icons.Filled.VideogameAsset
-                        ),
+                if (showBottomBar) {
+                    AppBottomBar(
+                        navController = navController,
+                        items = bottomItems
                     )
-                )
+                }
             }
         ) { innerPadding ->
-            // ---- Contenedor de rutas ----
             NavHost(
                 navController = navController,
-                startDestination = Route.Home.path,
+                startDestination = Routes.Login,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                // ---- Destino: Home ----
-                composable(Route.Home.path) {
-                    HomeScreen(
-                        onGoLogin = goLogin,
-                        onGoRegister = goRegister,
-                        onGoProductos = goProductos
-                    )
-                }
-                // ---- Destino: Login ----
-                composable(Route.Login.path) {
+                // ---------- LOGIN ----------
+                composable(Routes.Login) {
                     LoginScreenVm(
                         vm = authViewModel,
-                        onLoginOkNavigateHome = goHome,
-                        onGoRegister = goRegister
+                        onGoRegister = {
+                            navController.navigate(Routes.Register) {
+                                launchSingleTop = true
+                            }
+                        },
+                        onLoginOkNavigateHome = {
+                            // Navega a Home y saca Login del back stack
+                            navController.navigate(Routes.Home) {
+                                popUpTo(Routes.Login) { inclusive = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     )
                 }
-                // ---- Destino: Registro ----
-                composable(Route.Register.path) {
+
+                // ---------- REGISTER ----------
+                composable(Routes.Register) {
                     RegisterScreenVm(
                         vm = authViewModel,
-                        onRegisteredNavigateLogin = goLogin,
-                        onGoLogin = goLogin
+                        onGoLogin = {
+                            navController.navigate(Routes.Login) { launchSingleTop = true }
+                        },
+                        onRegisteredNavigateLogin = {
+                            // Vuelve a Login limpiando Register
+                            navController.navigate(Routes.Login) {
+                                popUpTo(Routes.Register) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
-                // ---- Destino: Productos (pestaña "Juegos") ----
-                composable(Route.Productos.path) {
-                    // Usamos la Route que internamente inyecta la lista demo (misma del Preview)
-                    ProductosRoute(
-                        onAgregarCarrito = { /* TODO: integrar lógica de carrito */ }
+
+                // ---------- HOME (con BottomBar visible) ----------
+                composable(Routes.Home) {
+                    HomeScreen(
+                        onGoLogin = {
+                            navController.navigate(Routes.Login) { launchSingleTop = true }
+                        },
+                        onGoRegister = {
+                            navController.navigate(Routes.Register) { launchSingleTop = true }
+                        },
+                        onGoProductos = {
+                            navController.navigate(Routes.Productos) { launchSingleTop = true }
+                        }
+                    )
+                }
+
+                // ---------- PRODUCTOS (con BottomBar visible) ----------
+                composable(Routes.Productos) {
+                    // Lista local (demoJuegos es private en ProductoScreen.kt, por eso definimos aquí)
+                    val juegos = listOf(
+                        Juego(1, "Destiny 2", "Acción RPG en mundo abierto, desafiante y épico.", 44990),
+                        Juego(2, "Gta 5", "Juego de acción y aventuras en mundo abierto.", 62990),
+                        Juego(3, "Left 4 Death 2", "Juego de disparos en primera persona.", 19990),
+                        Juego(4, "Payday 2", "Juego de disparos en primera persona y asaltos.", 39990),
+                    )
+
+                    ProductosScreen(
+                        juegos = juegos,
+                        onAgregarCarrito = { /* TODO: conecta a VM de carrito cuando quieras */ }
                     )
                 }
             }
