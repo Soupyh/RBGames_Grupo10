@@ -3,6 +3,7 @@ package com.example.rbgames_grupo1.navigation
 // UI y navegación
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Login
@@ -15,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -24,16 +24,16 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
 // Componentes propios
 import com.example.rbgames_grupo1.ui.components.AppBottomBar
-import com.example.rbgames_grupo1.ui.components.AppDrawer
 import com.example.rbgames_grupo1.ui.components.BottomItem
-import com.example.rbgames_grupo1.ui.components.defaultDrawerItems
 
 // Pantallas
+import com.example.rbgames_grupo1.ui.screen.AccountScreen
 import com.example.rbgames_grupo1.ui.screen.LoginScreenVm
 import com.example.rbgames_grupo1.ui.screen.RegisterScreenVm
 import com.example.rbgames_grupo1.ui.screen.HomeScreen
@@ -55,7 +55,8 @@ object Routes {
     const val Home = "home"
     const val Productos = "productos"
     const val Carrito = "carrito"
-    const val Admin = "admin"          // ⬅️ NUEVA ruta protegida
+    const val Admin = "admin"
+    const val Account = "account"
 }
 
 @Composable
@@ -69,22 +70,34 @@ fun AppNavGraph(
     // VM compartido del carrito (para badge y pantalla)
     val carritoVm: CarritoViewModel = viewModel()
 
-    // Sesión y rol
-    val sessionState by authViewModel.session.collectAsState()
+    // Sesión y rol (lifecycle-aware)
+    val sessionState by authViewModel.session.collectAsStateWithLifecycle()
+    val isLoggedIn = sessionState.isLoggedIn
     val isAdmin = sessionState.user?.role == Role.ADMIN
 
-    // Bottom items (Admin solo si es admin)
+    // Bottom items dinámicos
     val bottomItems = buildList {
         add(BottomItem(route = Routes.Home,      label = "Inicio",  icon = Icons.Filled.Home))
         add(BottomItem(route = Routes.Productos, label = "Juegos",  icon = Icons.Filled.VideogameAsset))
         add(BottomItem(route = Routes.Carrito,   label = "Carrito", icon = Icons.Filled.ShoppingCart))
-        add(BottomItem(route = Routes.Login,     label = "Login",   icon = Icons.Filled.Login))
-        if (isAdmin) add(BottomItem(route = Routes.Admin, label = "Admin", icon = Icons.Filled.Badge)) // ⬅️ condicional
+
+        if (isLoggedIn) {
+            add(BottomItem(route = Routes.Account, label = "Cuenta", icon = Icons.Filled.AccountCircle))
+        } else {
+            add(BottomItem(route = Routes.Login,   label = "Login",  icon = Icons.Filled.Login))
+        }
+
+        if (isAdmin) {
+            add(BottomItem(route = Routes.Admin, label = "Admin", icon = Icons.Filled.Badge))
+        }
     }
 
+    // Ruta actual
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute: String? = backStackEntry?.destination?.route?.substringBefore("?")
-    val showBottomBar = currentRoute in setOf(Routes.Home, Routes.Productos, Routes.Carrito, Routes.Admin)
+    val showBottomBar = currentRoute in setOf(
+        Routes.Home, Routes.Productos, Routes.Carrito, Routes.Account, Routes.Admin, Routes.Login
+    )
 
     fun navigateSingleTop(route: String) {
         navController.navigate(route) {
@@ -94,35 +107,6 @@ fun AppNavGraph(
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            AppDrawer(
-                currentRoute = currentRoute,
-                items = defaultDrawerItems(
-                    onHome = {
-                        navigateSingleTop(Routes.Home)
-                        scope.launch { drawerState.close() }
-                    },
-                    onLogin = {
-                        navController.navigate(Routes.Login) {
-                            popUpTo(Routes.Login) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                        scope.launch { drawerState.close() }
-                    },
-                    onRegister = {
-                        navController.navigate(Routes.Register) {
-                            popUpTo(Routes.Register) { inclusive = true }
-                            launchSingleTop = true
-                        }
-                        scope.launch { drawerState.close() }
-                    }
-                    // Si quieres agregar Admin al Drawer, hazlo condicional a isAdmin.
-                )
-            )
-        }
-    ) {
         Scaffold(
             bottomBar = {
                 if (showBottomBar) {
@@ -188,7 +172,6 @@ fun AppNavGraph(
                         Juego(3, "Left 4 Death 2", "Juego de disparos en primera persona.", 19990),
                         Juego(4, "Payday 2", "Juego de disparos en primera persona y asaltos.", 39990),
                     )
-                    // Pasa el juego al carrito y navega
                     ProductosScreen(
                         juegos = juegos,
                         onAgregarCarrito = { juego ->
@@ -196,7 +179,8 @@ fun AppNavGraph(
                                 CartItem(
                                     id = juego.id.toString(),
                                     nombre = juego.nombre,
-                                    precio = juego.precioCLP,  // ajusta al nombre real del campo
+                                    // Usa el campo que tengas: precio o precioCLP
+                                    precio = juego.precioCLP, // si tu data class usa precioCLP, cámbialo aquí
                                     imagenRes = null,
                                     cantidad = 1
                                 )
@@ -234,7 +218,6 @@ fun AppNavGraph(
                             onOpenReportes   = { /* ... */ }
                         )
                     } else {
-                        // Si no es admin, redirige silenciosamente a Home
                         LaunchedEffect(Unit) {
                             navController.navigate(Routes.Home) {
                                 popUpTo(Routes.Home) { inclusive = true }
@@ -244,7 +227,26 @@ fun AppNavGraph(
                         Text("No autorizado")
                     }
                 }
+
+                // ---------- ACCOUNT (usa tu AccountScreen con vm) ----------
+                composable(Routes.Account) {
+                    AccountScreen(
+                        vm = authViewModel,
+                        onSaved = {
+                            // Opcional: mostrar un snackbar/volver atrás
+                            // navController.popBackStack()
+                        },
+                        onLogout = {
+                            authViewModel.logout()
+                            navController.navigate(Routes.Home) {
+                                popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
             }
         }
-    }
+
 }
