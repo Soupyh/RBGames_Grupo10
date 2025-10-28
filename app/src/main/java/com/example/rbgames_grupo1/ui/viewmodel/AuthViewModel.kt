@@ -55,7 +55,8 @@ data class UserProfile(
     val nombre: String = "",
     val email: String = "",
     val telefono: String = "",
-    val role: Role = Role.USUARIO       // ⬅️ ahora guardamos el rol
+    val role: Role = Role.USUARIO,       // ⬅️ ahora guardamos el rol
+    val photoUri: String? = null
 )
 
 data class SessionState(
@@ -90,10 +91,9 @@ class AuthViewModel(
     // ----------------- Helpers de Roles -----------------
 
     /** Convierte un string del repositorio al enum Role de forma segura. */
-    private fun parseRole(str: String?): Role = when (str?.trim()?.lowercase()) {
-        "admin"   -> Role.ADMIN
-        "soporte" -> Role.SOPORTE
-        "usuario" -> Role.USUARIO
+    private fun parseRole(text: String?): Role = when (text?.uppercase()) {
+        "ADMIN"   -> Role.ADMIN
+        "SOPORTE" -> Role.SOPORTE
         else      -> Role.USUARIO
     }
 
@@ -156,35 +156,32 @@ class AuthViewModel(
     fun submitLogin() {
         val s = _login.value
         if (!s.canSubmit || s.isSubmitting) return
+
         viewModelScope.launch {
             _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
-            delay(500) // Simula latencia de red
 
-            // Consulta real a la BD vía repositorio
+            // 1) Validar credenciales
             val result = repository.login(s.email.trim(), s.pass)
 
-            _login.update { old ->
+            _login.update {
                 if (result.isSuccess) {
-                    // Intentamos obtener el rol desde el repositorio (si existe)
-                    val roleFromRepo: Role = try {
-                        parseRole(repository.getUserRoleByEmail(s.email.trim()))
-                    } catch (_: Exception) {
-                        // Fallback si aún no tienes ese método implementado:
-                        fallbackRoleByEmail(s.email.trim())
-                    }
+                    // 2) 🔽 Cargar perfil completo desde Room y abrir sesión
+                    val u = repository.findByEmail(s.email.trim())
 
-                    // Marca sesión iniciada con perfil (puedes cargar nombre/teléfono desde tu repo si los tienes)
                     setLoggedIn(
                         UserProfile(
-                            nombre = "",
-                            email = s.email.trim(),
-                            telefono = "",
-                            role = roleFromRepo
+                            nombre   = u?.name.orEmpty(),
+                            email    = u?.email.orEmpty(),
+                            telefono = u?.phone.orEmpty(),
+                            role     = parseRole(u?.role),
+                            photoUri = u?.photoUri
                         )
                     )
-                    old.copy(isSubmitting = false, success = true, errorMsg = null)
+
+                    // 3) Marcar éxito del login para que la UI navegue
+                    it.copy(isSubmitting = false, success = true, errorMsg = null)
                 } else {
-                    old.copy(
+                    it.copy(
                         isSubmitting = false,
                         success = false,
                         errorMsg = result.exceptionOrNull()?.message ?: "Error de autenticación"
@@ -270,5 +267,12 @@ class AuthViewModel(
 
     fun clearRegisterResult() {
         _register.update { it.copy(success = false, errorMsg = null) }
+    }
+
+    fun updatePhoto(uriString: String?) {
+        _session.update { s ->
+            s.copy(user = s.user?.copy(photoUri = uriString))
+        }
+        // TODO: si persistes en Room, llama a repository.updatePhoto(email, uriString)
     }
 }

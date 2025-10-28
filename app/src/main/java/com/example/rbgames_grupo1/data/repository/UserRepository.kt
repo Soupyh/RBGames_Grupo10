@@ -6,12 +6,11 @@ import com.example.rbgames_grupo1.data.local.users.UserEntity
 class UserRepository(private val userDao: UserDao) {
 
     suspend fun login(email: String, password: String): Result<Unit> {
-        val u = userDao.findByEmail(email.trim())
-        return if (u != null && u.password == password.trim()) {
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalArgumentException("Credenciales inválidas"))
-        }
+        val e = email.trim()
+        val p = password.trim()
+        val u = userDao.findByEmail(e)
+        return if (u != null && u.password == p) Result.success(Unit)
+        else Result.failure(IllegalArgumentException("Credenciales inválidas"))
     }
 
     suspend fun register(name: String, email: String, phone: String, password: String): Result<Unit> {
@@ -21,7 +20,7 @@ class UserRepository(private val userDao: UserDao) {
                     name = name.trim(),
                     email = email.trim(),
                     phone = phone.trim(),
-                    password = password,     // (en demo plano)
+                    password = password,
                     role = "USUARIO"
                 )
             )
@@ -33,4 +32,11 @@ class UserRepository(private val userDao: UserDao) {
 
     suspend fun getUserRoleByEmail(email: String): String? =
         userDao.getRoleByEmail(email.trim())
+
+    suspend fun updatePhoto(email: String, uri: String?) {
+        userDao.updatePhoto(email, uri)
+    }
+
+    suspend fun findByEmail(email: String): UserEntity? =
+        userDao.findByEmail(email.trim())
 }

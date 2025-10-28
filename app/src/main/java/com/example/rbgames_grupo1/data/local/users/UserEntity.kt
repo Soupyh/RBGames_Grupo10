@@ -12,5 +12,8 @@ data class UserEntity (
     val email: String,                  // Correo (idealmente único a nivel de negocio)
     val phone: String,                  // Teléfono del usuario (⚠️ agregado)
     val password: String,
-    val role: String = "USUARIO"
+    val role: String = "USUARIO",        // Rol del usuario (por defecto: "USUARIO")
+    val photoUri: String? = null         // URI de la foto de perfil (puede ser nulo)
 )
+
+
