@@ -14,36 +14,39 @@ import com.example.rbgames_grupo1.domain.validation.validateNameLettersOnly
 import com.example.rbgames_grupo1.domain.validation.validatePhoneDigitsOnly
 import com.example.rbgames_grupo1.domain.validation.validateStrongPassword
 
+// ----------------- ROLES -----------------
+enum class Role { ADMIN, SOPORTE, USUARIO }
+
 // ----------------- ESTADOS DE UI (observable con StateFlow) -----------------
 
-data class LoginUiState(                                   // Estado de la pantalla Login
-    val email: String = "",                                // Campo email
-    val pass: String = "",                                 // Campo contraseña (texto)
-    val emailError: String? = null,                        // Error de email
-    val passError: String? = null,                         // (Opcional) error de pass en login
-    val isSubmitting: Boolean = false,                     // Flag de carga
-    val canSubmit: Boolean = false,                        // Habilitar botón
-    val success: Boolean = false,                          // Resultado OK
-    val errorMsg: String? = null                           // Error global (credenciales inválidas)
+data class LoginUiState(
+    val email: String = "",
+    val pass: String = "",
+    val emailError: String? = null,
+    val passError: String? = null,
+    val isSubmitting: Boolean = false,
+    val canSubmit: Boolean = false,
+    val success: Boolean = false,
+    val errorMsg: String? = null
 )
 
-data class RegisterUiState(                                // Estado de la pantalla Registro (<= 5 campos)
-    val name: String = "",                                 // 1) Nombre
-    val email: String = "",                                // 2) Email
-    val phone: String = "",                                // 3) Teléfono
-    val pass: String = "",                                 // 4) Contraseña
-    val confirm: String = "",                              // 5) Confirmación
+data class RegisterUiState(
+    val name: String = "",
+    val email: String = "",
+    val phone: String = "",
+    val pass: String = "",
+    val confirm: String = "",
 
-    val nameError: String? = null,                         // Errores por campo
+    val nameError: String? = null,
     val emailError: String? = null,
     val phoneError: String? = null,
     val passError: String? = null,
     val confirmError: String? = null,
 
-    val isSubmitting: Boolean = false,                     // Flag de carga
-    val canSubmit: Boolean = false,                        // Habilitar botón
-    val success: Boolean = false,                          // Resultado OK
-    val errorMsg: String? = null                           // Error global (ej: duplicado)
+    val isSubmitting: Boolean = false,
+    val canSubmit: Boolean = false,
+    val success: Boolean = false,
+    val errorMsg: String? = null
 )
 
 // ----------------- SESIÓN Y PERFIL -----------------
@@ -51,7 +54,8 @@ data class RegisterUiState(                                // Estado de la panta
 data class UserProfile(
     val nombre: String = "",
     val email: String = "",
-    val telefono: String = ""
+    val telefono: String = "",
+    val role: Role = Role.USUARIO       // ⬅️ ahora guardamos el rol
 )
 
 data class SessionState(
@@ -60,7 +64,6 @@ data class SessionState(
 )
 
 // ----------------- COLECCIÓN EN MEMORIA (solo para la demo) -----------------
-
 // Modelo mínimo de usuario para la colección (no se expone)
 private data class DemoUser(
     val name: String,
@@ -71,7 +74,7 @@ private data class DemoUser(
 
 class AuthViewModel(
     private val repository: UserRepository
-) : ViewModel() { // ViewModel que maneja Login/Registro + Sesión/Perfil
+) : ViewModel() { // Maneja Login/Registro + Sesión/Perfil/Roles
 
     // --- Flujos de estado para observar desde la UI ---
     private val _login = MutableStateFlow(LoginUiState())
@@ -80,23 +83,51 @@ class AuthViewModel(
     private val _register = MutableStateFlow(RegisterUiState())
     val register: StateFlow<RegisterUiState> = _register
 
-    // --- Sesión/Perfil (nuevo) ---
+    // --- Sesión/Perfil ---
     private val _session = MutableStateFlow(SessionState())
     val session: StateFlow<SessionState> = _session
 
-    // ----------------- API de sesión/perfil (nuevo) -----------------
+    // ----------------- Helpers de Roles -----------------
+
+    /** Convierte un string del repositorio al enum Role de forma segura. */
+    private fun parseRole(str: String?): Role = when (str?.trim()?.lowercase()) {
+        "admin"   -> Role.ADMIN
+        "soporte" -> Role.SOPORTE
+        "usuario" -> Role.USUARIO
+        else      -> Role.USUARIO
+    }
+
+    /** Heurística de respaldo si el repo aún no expone rol. */
+    private fun fallbackRoleByEmail(email: String): Role {
+        val e = email.lowercase()
+        return when {
+            "admin" in e   -> Role.ADMIN
+            "soporte" in e -> Role.SOPORTE
+            else           -> Role.USUARIO
+        }
+    }
+
+    // ----------------- API de sesión/perfil -----------------
 
     /** Marca sesión iniciada con un perfil. */
     fun setLoggedIn(profile: UserProfile) {
         _session.value = SessionState(isLoggedIn = true, user = profile)
     }
 
-    /** Actualiza campos del perfil en memoria (y aquí puedes disparar update remoto si tienes backend). */
+    /** Actualiza campos del perfil en memoria. (Persistir en repo si aplica) */
     fun updateProfile(nombre: String, email: String, telefono: String) {
         _session.update { s ->
             s.copy(user = s.user?.copy(nombre = nombre, email = email, telefono = telefono))
         }
-        // TODO: Si tienes backend, llamar aquí al repositorio para persistir cambios.
+        // TODO: repository.updateProfile(...) si tienes backend/BD local
+    }
+
+    /** Actualiza SOLO el rol del perfil (útil para pruebas o pantalla de roles). */
+    fun updateRole(role: Role) {
+        _session.update { s ->
+            s.copy(user = s.user?.copy(role = role))
+        }
+        // TODO: repository.updateUserRole(...) si corresponde
     }
 
     /** Cierra sesión y limpia el perfil. */
@@ -132,22 +163,28 @@ class AuthViewModel(
             // Consulta real a la BD vía repositorio
             val result = repository.login(s.email.trim(), s.pass)
 
-            _login.update {
+            _login.update { old ->
                 if (result.isSuccess) {
-                    // --- NUEVO: marca sesión iniciada con perfil básico ---
-                    // Si tienes un endpoint para obtener el perfil, úsalo aquí.
-                    // Por ahora tomamos el email del login y dejamos nombre/teléfono vacíos
-                    // para que el usuario pueda editarlos en AccountScreen.
+                    // Intentamos obtener el rol desde el repositorio (si existe)
+                    val roleFromRepo: Role = try {
+                        parseRole(repository.getUserRoleByEmail(s.email.trim()))
+                    } catch (_: Exception) {
+                        // Fallback si aún no tienes ese método implementado:
+                        fallbackRoleByEmail(s.email.trim())
+                    }
+
+                    // Marca sesión iniciada con perfil (puedes cargar nombre/teléfono desde tu repo si los tienes)
                     setLoggedIn(
                         UserProfile(
                             nombre = "",
                             email = s.email.trim(),
-                            telefono = ""
+                            telefono = "",
+                            role = roleFromRepo
                         )
                     )
-                    it.copy(isSubmitting = false, success = true, errorMsg = null)
+                    old.copy(isSubmitting = false, success = true, errorMsg = null)
                 } else {
-                    it.copy(
+                    old.copy(
                         isSubmitting = false,
                         success = false,
                         errorMsg = result.exceptionOrNull()?.message ?: "Error de autenticación"
@@ -156,6 +193,8 @@ class AuthViewModel(
             }
         }
     }
+
+
 
     fun clearLoginResult() {
         _login.update { it.copy(success = false, errorMsg = null) }
@@ -211,14 +250,15 @@ class AuthViewModel(
                 email = s.email.trim(),
                 phone = s.phone.trim(),
                 password = s.pass
+                // Si tu repo soporta rol en el registro, puedes pasar Role.USUARIO aquí.
             )
 
-            _register.update {
+            _register.update { old ->
                 if (result.isSuccess) {
                     // Nota: no auto-logueamos tras registrar (puedes hacerlo si lo deseas).
-                    it.copy(isSubmitting = false, success = true, errorMsg = null)
+                    old.copy(isSubmitting = false, success = true, errorMsg = null)
                 } else {
-                    it.copy(
+                    old.copy(
                         isSubmitting = false,
                         success = false,
                         errorMsg = result.exceptionOrNull()?.message ?: "No se pudo registrar"

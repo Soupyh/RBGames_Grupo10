@@ -3,26 +3,28 @@ package com.example.rbgames_grupo1.navigation
 // UI y navegación
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Login
-import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
 // Componentes propios
@@ -38,14 +40,13 @@ import com.example.rbgames_grupo1.ui.screen.HomeScreen
 import com.example.rbgames_grupo1.ui.screen.ProductosScreen
 import com.example.rbgames_grupo1.ui.screen.Juego
 import com.example.rbgames_grupo1.ui.screen.CarritoScreen
-import com.example.rbgames_grupo1.ui.screen.AccountScreen
+import com.example.rbgames_grupo1.ui.screen.AdminScreen
 
 // ViewModels
 import com.example.rbgames_grupo1.ui.viewmodel.AuthViewModel
-import com.example.rbgames_grupo1.ui.viewmodel.CarritoViewModel   // ⬅️ NUEVO
-import com.example.rbgames_grupo1.ui.viewmodel.CartItem          // ⬅️ NUEVO
-
-
+import com.example.rbgames_grupo1.ui.viewmodel.CarritoViewModel
+import com.example.rbgames_grupo1.ui.viewmodel.CartItem
+import com.example.rbgames_grupo1.ui.viewmodel.Role
 
 // Rutas
 object Routes {
@@ -54,7 +55,7 @@ object Routes {
     const val Home = "home"
     const val Productos = "productos"
     const val Carrito = "carrito"
-    const val Cuenta = "cuenta"
+    const val Admin = "admin"          // ⬅️ NUEVA ruta protegida
 }
 
 @Composable
@@ -65,33 +66,25 @@ fun AppNavGraph(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // ⬇️ ViewModel de carrito compartido para todo el grafo
+    // VM compartido del carrito (para badge y pantalla)
     val carritoVm: CarritoViewModel = viewModel()
 
-    // Observa la sesión para decidir qué mostrar en BottomBar
+    // Sesión y rol
     val sessionState by authViewModel.session.collectAsState()
+    val isAdmin = sessionState.user?.role == Role.ADMIN
 
-    // BottomBar dinámica: Login ↔ Cuenta
-    val bottomItems: List<BottomItem> =
-        if (sessionState.isLoggedIn) {
-            listOf(
-                BottomItem(route = Routes.Home,      label = "Inicio",  icon = Icons.Filled.Home),
-                BottomItem(route = Routes.Productos, label = "Juegos",  icon = Icons.Filled.VideogameAsset),
-                BottomItem(route = Routes.Carrito,   label = "Carrito", icon = Icons.Filled.ShoppingCart),
-                BottomItem(route = Routes.Cuenta,    label = "Cuenta",  icon = Icons.Filled.AccountCircle)
-            )
-        } else {
-            listOf(
-                BottomItem(route = Routes.Home,      label = "Inicio",  icon = Icons.Filled.Home),
-                BottomItem(route = Routes.Productos, label = "Juegos",  icon = Icons.Filled.VideogameAsset),
-                BottomItem(route = Routes.Carrito,   label = "Carrito", icon = Icons.Filled.ShoppingCart),
-                BottomItem(route = Routes.Login,     label = "Login",   icon = Icons.Filled.Login)
-            )
-        }
+    // Bottom items (Admin solo si es admin)
+    val bottomItems = buildList {
+        add(BottomItem(route = Routes.Home,      label = "Inicio",  icon = Icons.Filled.Home))
+        add(BottomItem(route = Routes.Productos, label = "Juegos",  icon = Icons.Filled.VideogameAsset))
+        add(BottomItem(route = Routes.Carrito,   label = "Carrito", icon = Icons.Filled.ShoppingCart))
+        add(BottomItem(route = Routes.Login,     label = "Login",   icon = Icons.Filled.Login))
+        if (isAdmin) add(BottomItem(route = Routes.Admin, label = "Admin", icon = Icons.Filled.Badge)) // ⬅️ condicional
+    }
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute: String? = backStackEntry?.destination?.route?.substringBefore("?")
-    val showBottomBar = currentRoute in setOf(Routes.Home, Routes.Productos, Routes.Carrito, Routes.Cuenta)
+    val showBottomBar = currentRoute in setOf(Routes.Home, Routes.Productos, Routes.Carrito, Routes.Admin)
 
     fun navigateSingleTop(route: String) {
         navController.navigate(route) {
@@ -125,6 +118,7 @@ fun AppNavGraph(
                         }
                         scope.launch { drawerState.close() }
                     }
+                    // Si quieres agregar Admin al Drawer, hazlo condicional a isAdmin.
                 )
             )
         }
@@ -180,15 +174,9 @@ fun AppNavGraph(
                 // ---------- HOME ----------
                 composable(Routes.Home) {
                     HomeScreen(
-                        onGoLogin = {
-                            navController.navigate(Routes.Login) { launchSingleTop = true }
-                        },
-                        onGoRegister = {
-                            navController.navigate(Routes.Register) { launchSingleTop = true }
-                        },
-                        onGoProductos = {
-                            navigateSingleTop(Routes.Productos)
-                        }
+                        onGoLogin = { navController.navigate(Routes.Login) { launchSingleTop = true } },
+                        onGoRegister = { navController.navigate(Routes.Register) { launchSingleTop = true } },
+                        onGoProductos = { navigateSingleTop(Routes.Productos) }
                     )
                 }
 
@@ -200,21 +188,19 @@ fun AppNavGraph(
                         Juego(3, "Left 4 Death 2", "Juego de disparos en primera persona.", 19990),
                         Juego(4, "Payday 2", "Juego de disparos en primera persona y asaltos.", 39990),
                     )
-
+                    // Pasa el juego al carrito y navega
                     ProductosScreen(
                         juegos = juegos,
                         onAgregarCarrito = { juego ->
-                            // ⬅️ AQUI SE AGREGA AL CARRITO
                             carritoVm.addOrIncrement(
                                 CartItem(
                                     id = juego.id.toString(),
                                     nombre = juego.nombre,
-                                    precio = juego.precioCLP,
-                                    imagenRes = null, // usa drawable si tienes
+                                    precio = juego.precioCLP,  // ajusta al nombre real del campo
+                                    imagenRes = null,
                                     cantidad = 1
                                 )
                             )
-                            // y navegamos al carrito (opcional)
                             navigateSingleTop(Routes.Carrito)
                         }
                     )
@@ -222,35 +208,9 @@ fun AppNavGraph(
 
                 // ---------- CARRITO ----------
                 composable(Routes.Carrito) {
-                    // Usa el MISMO VM compartido para ver lo que se agregó
-                    CarritoScreen(
-                        vm = carritoVm, // ⬅️ importante compartir instancia
-                        onCheckout = { total ->
-                            // navController.navigate("pago?monto=$total")
-                        }
-                    )
-                }
-
-                // ---------- CUENTA ----------
-                composable(Routes.Cuenta) {
-                    AccountScreen(
-                        vm = authViewModel,
-                        onSaved = { /* opcional */ },
-                        onLogout = {
-                            navController.navigate(Routes.Home) {
-                                popUpTo(Routes.Home) { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    )
-                }
-                // ---------- PAGOS ----------
-                composable(Routes.Carrito) {
                     CarritoScreen(
                         vm = carritoVm,
-                        onCheckout = { total ->
-                            // guardar venta si quieres
-                        },
+                        onCheckout = { /* guardar venta si quieres */ },
                         onGoHome = {
                             navController.navigate(Routes.Home) {
                                 popUpTo(Routes.Home) { inclusive = true }
@@ -258,6 +218,31 @@ fun AppNavGraph(
                             }
                         }
                     )
+                }
+
+                // ---------- ADMIN (PROTEGIDO) ----------
+                composable(Routes.Admin) {
+                    if (isAdmin) {
+                        AdminScreen(
+                            usuariosCount = 12,
+                            categoriasCount = 6,
+                            productosCount = 48,
+                            onOpenUsuarios   = { /* navController.navigate("admin/usuarios") */ },
+                            onOpenCategorias = { /* ... */ },
+                            onOpenProductos  = { /* ... */ },
+                            onOpenRoles      = { /* ... */ },
+                            onOpenReportes   = { /* ... */ }
+                        )
+                    } else {
+                        // Si no es admin, redirige silenciosamente a Home
+                        LaunchedEffect(Unit) {
+                            navController.navigate(Routes.Home) {
+                                popUpTo(Routes.Home) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                        Text("No autorizado")
+                    }
                 }
             }
         }
