@@ -61,7 +61,7 @@ fun AccountScreen(
     onSaved: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
-    val session by vm.session.collectAsState()
+    val session by vm.session.collectAsStateWithLifecycle(initialValue = vm.session.collectAsState().value)
     if (!session.isLoggedIn || session.user == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("No has iniciado sesión.")
