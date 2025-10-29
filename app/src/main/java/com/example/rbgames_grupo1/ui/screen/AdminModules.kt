@@ -3,6 +3,8 @@ package com.example.rbgames_grupo1.ui.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -13,18 +15,171 @@ import com.example.rbgames_grupo1.data.local.database.AppDatabase
 import com.example.rbgames_grupo1.data.repository.ReportRepository
 import com.example.rbgames_grupo1.ui.viewmodel.Role
 import com.example.rbgames_grupo1.ui.viewmodel.SupportViewModel
+
+// ======================================================
+// ===============  ADMIN > USUARIOS  ===================
+// ======================================================
+
+private data class AdminUserUi(
+    val id: Long,
+    val nombre: String,
+    val email: String,
+    val role: Role,
+    val activo: Boolean
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminUsuariosScreen(onBack: () -> Unit) {
-    Scaffold(topBar = {
-        TopAppBar(title = { Text("Usuarios") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("Volver") } })
-    }) { inner ->
-        Column(Modifier.padding(inner).padding(16.dp)) {
-            Text("Aquí va el CRUD de usuarios.")
+    // Estado en memoria (DEMO). Luego lo conectas a tu VM/DAO real.
+    var users by remember {
+        mutableStateOf(
+            listOf(
+                AdminUserUi(1, "Admin", "a@a.cl", Role.ADMIN, true),
+                AdminUserUi(2, "Soporte", "soporte@a.cl", Role.SOPORTE, true),
+                AdminUserUi(3, "Benjamin Leal", "benjamin@a.cl", Role.USUARIO, true),
+            )
+        )
+    }
+    var query by remember { mutableStateOf("") }
+    var roleFilter by remember { mutableStateOf<Role?>(null) }
+
+    val filtered = remember(users, query, roleFilter) {
+        users
+            .filter {
+                val t = "${it.nombre} ${it.email}".lowercase()
+                t.contains(query.lowercase())
+            }
+            .filter { roleFilter == null || it.role == roleFilter }
+            .sortedBy { it.id }
+    }
+
+    fun addQuick() {
+        val nextId = (users.maxOfOrNull { it.id } ?: 0L) + 1
+        users = users + AdminUserUi(nextId, "Nuevo $nextId", "nuevo$nextId@a.cl", Role.USUARIO, true)
+    }
+    fun toggleActivo(u: AdminUserUi) {
+        users = users.map { if (it.id == u.id) it.copy(activo = !it.activo) else it }
+    }
+    fun changeRole(u: AdminUserUi, role: Role) {
+        users = users.map { if (it.id == u.id) it.copy(role = role) else it }
+    }
+    fun deleteUser(u: AdminUserUi) {
+        users = users.filterNot { it.id == u.id }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Usuarios") },
+                navigationIcon = { TextButton(onClick = onBack) { Text("Volver") } },
+                actions = {
+                    IconButton(onClick = { addQuick() }) {
+                        Icon(Icons.Filled.Add, contentDescription = "Agregar")
+                    }
+                }
+            )
+        }
+    ) { inner ->
+        Column(
+            modifier = Modifier
+                .padding(inner)
+                .padding(16.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Buscar
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Buscar por nombre o email") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Filtro de rol
+            RolesFilterRow(selected = roleFilter, onSelect = { roleFilter = it })
+
+            Divider()
+
+            if (filtered.isEmpty()) {
+                Text("No hay usuarios.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(filtered, key = { it.id }) { u ->
+                        UsuarioCard(
+                            user = u,
+                            onToggleActivo = { toggleActivo(u) },
+                            onChangeRole = { r -> changeRole(u, r) },
+                            onDelete = { deleteUser(u) }
+                        )
+                    }
+                }
+            }
         }
     }
 }
+
+@Composable
+private fun RolesFilterRow(selected: Role?, onSelect: (Role?) -> Unit) {
+    val opciones = listOf<Role?>(null, Role.USUARIO, Role.SOPORTE, Role.ADMIN)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        opciones.forEach { r ->
+            FilterChip(
+                selected = selected == r,
+                onClick = { onSelect(r) },
+                label = { Text((r?.name ?: "Todos").lowercase().replaceFirstChar { it.uppercase() }) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun UsuarioCard(
+    user: AdminUserUi,
+    onToggleActivo: () -> Unit,
+    onChangeRole: (Role) -> Unit,
+    onDelete: () -> Unit
+) {
+    ElevatedCard {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(user.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(user.email, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Rol:", fontWeight = FontWeight.Medium)
+                var expanded by remember { mutableStateOf(false) }
+                AssistChip(onClick = { expanded = true }, label = { Text(user.role.name) })
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    Role.values().forEach { r ->
+                        DropdownMenuItem(
+                            text = { Text(r.name) },
+                            onClick = {
+                                expanded = false
+                                onChangeRole(r)
+                            }
+                        )
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val activoTxt = if (user.activo) "Desactivar" else "Activar"
+                OutlinedButton(onClick = onToggleActivo) { Text(activoTxt) }
+                OutlinedButton(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Eliminar") }
+            }
+        }
+    }
+}
+
+// ======================================================
+//
+// ==============  ADMIN > PRODUCTOS (placeholder) ======
+//
+// ======================================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,11 +194,17 @@ fun AdminProductosScreen(onBack: () -> Unit) {
     }
 }
 
+// ======================================================
+//
+// ==============  ADMIN > REPORTES (tickets) ===========
+//
+// ======================================================
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminReportesScreen(
-    role: Role,                 // 👈 recibimos el rol del usuario actual
-    email: String,              // 👈 y su email (por si tu loadInbox lo usa)
+    role: Role,   // rol actual logueado
+    email: String,
     onBack: () -> Unit
 ) {
     // Seguridad básica (solo ADMIN o SOPORTE)
@@ -52,7 +213,10 @@ fun AdminReportesScreen(
             TopAppBar(title = { Text("Reportes") },
                 navigationIcon = { TextButton(onClick = onBack) { Text("Volver") } })
         }) { inner ->
-            Box(Modifier.padding(inner).fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Box(
+                Modifier.padding(inner).fillMaxSize(),
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
                 Text("No autorizado")
             }
         }
@@ -65,9 +229,7 @@ fun AdminReportesScreen(
 
     // Carga inicial de la bandeja
     LaunchedEffect(role, email) {
-        // Si tu repos reconoce ADMIN para listar todo, basta con pasar (role, email)
-        // Si necesitas listar TODO como admin, puedes usar: supportVm.loadAll()
-        supportVm.loadInbox(role, email)
+        supportVm.loadInbox(role, email) // si tienes loadAll() úsalo aquí para admin
     }
 
     val inbox by supportVm.inbox.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -76,7 +238,8 @@ fun AdminReportesScreen(
     var filtro by remember { mutableStateOf("TODOS") }
     val estados = listOf("TODOS", "ABIERTO", "EN_PROCESO", "CERRADO")
     val listaFiltrada = remember(inbox, filtro) {
-        if (filtro == "TODOS") inbox else inbox.filter { it.status.equals(filtro, ignoreCase = true) }
+        if (filtro == "TODOS") inbox
+        else inbox.filter { it.status.equals(filtro, ignoreCase = true) }
     }
 
     Scaffold(

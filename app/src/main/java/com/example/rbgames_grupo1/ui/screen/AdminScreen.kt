@@ -227,7 +227,7 @@ private fun AdminActionCard(action: AdminAction) {
                 )
             } else {
                 Text(
-                    "Abrir",
+                    "Abrir Reportes",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.align(Alignment.End)

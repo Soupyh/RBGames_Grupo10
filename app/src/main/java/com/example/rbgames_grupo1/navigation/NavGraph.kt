@@ -240,7 +240,8 @@ fun AppNavGraph(
             }
 
             // ---------- SUBPÁGINAS DE ADMIN ----------
-            composable(Routes.AdminUsuarios)  { AdminUsuariosScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.AdminUsuarios) {
+                AdminUsuariosScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.AdminProductos) { AdminProductosScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.AdminReportes)  {
                 // obtenemos el rol/email del sessionState que ya tienes
