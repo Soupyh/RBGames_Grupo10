@@ -134,6 +134,11 @@ private fun RolesFilterRow(selected: Role?, onSelect: (Role?) -> Unit) {
     }
 }
 
+// ======================================================
+//
+// ==============  ADMIN > USUARIOS (placeholder) ======
+//
+// ======================================================
 @Composable
 private fun UsuarioCard(
     user: AdminUserUi,
@@ -184,15 +189,238 @@ private fun UsuarioCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminProductosScreen(onBack: () -> Unit) {
-    Scaffold(topBar = {
-        TopAppBar(title = { Text("Productos") },
-            navigationIcon = { TextButton(onClick = onBack) { Text("Volver") } })
-    }) { inner ->
-        Column(Modifier.padding(inner).padding(16.dp)) {
-            Text("Aquí va alta/stock/precios de productos.")
+    // -------- Estado DEMO en memoria (luego lo conectas a tu VM/DAO) --------
+    data class AdminProductUi(
+        val id: Long,
+        val nombre: String,
+        val categoria: String,
+        val precioCLP: Int,
+        val stock: Int,
+        val activo: Boolean
+    )
+    fun clp(n: Int) = "$" + "%,d".format(n).replace(',', '.')
+
+    var productos by remember {
+        mutableStateOf(
+            listOf(
+                AdminProductUi(1, "Destiny 2", "Acción", 44990, 12, true),
+                AdminProductUi(2, "GTA V", "Mundo abierto", 62990, 5, true),
+                AdminProductUi(3, "Left 4 Dead 2", "Shooter", 19990, 0, false),
+                AdminProductUi(4, "Payday 2", "Cooperativo", 39990, 21, true)
+            )
+        )
+    }
+
+    // -------- Búsqueda y filtros --------
+    var query by remember { mutableStateOf("") }
+    val categorias = remember(productos) { productos.map { it.categoria }.toSet().toList().sorted() }
+    var categoriaSel by remember { mutableStateOf<String?>(null) }
+    var verSoloActivos by remember { mutableStateOf(false) }
+
+    val filtrados = remember(productos, query, categoriaSel, verSoloActivos) {
+        productos
+            .asSequence()
+            .filter { if (verSoloActivos) it.activo else true }
+            .filter { categoriaSel == null || it.categoria == categoriaSel }
+            .filter {
+                val t = "${it.nombre} ${it.categoria}".lowercase()
+                t.contains(query.lowercase())
+            }
+            .sortedBy { it.id }
+            .toList()
+    }
+
+    // -------- Acciones --------
+    fun actualizar(p: AdminProductUi) {
+        productos = productos.map { if (it.id == p.id) p else it }
+    }
+    fun eliminar(p: AdminProductUi) {
+        productos = productos.filterNot { it.id == p.id }
+    }
+    fun cambiarStock(p: AdminProductUi, delta: Int) {
+        val nuevo = (p.stock + delta).coerceAtLeast(0)
+        if (nuevo != p.stock) actualizar(p.copy(stock = nuevo))
+    }
+    fun toggleActivo(p: AdminProductUi) = actualizar(p.copy(activo = !p.activo))
+
+    // -------- Diálogos (agregar/editar) --------
+    var editarProducto by remember { mutableStateOf<AdminProductUi?>(null) }
+    var mostrarAgregar by remember { mutableStateOf(false) }
+
+    @Composable
+    fun ProductoDialog(
+        titulo: String,
+        inicial: AdminProductUi,
+        onDismiss: () -> Unit,
+        onSave: (AdminProductUi) -> Unit
+    ) {
+        var nombre by remember(inicial) { mutableStateOf(inicial.nombre) }
+        var categoria by remember(inicial) { mutableStateOf(inicial.categoria) }
+        var precioTxt by remember(inicial) { mutableStateOf(inicial.precioCLP.toString()) }
+        var stockTxt by remember(inicial) { mutableStateOf(inicial.stock.toString()) }
+        var activo by remember(inicial) { mutableStateOf(inicial.activo) }
+
+        val precioVal = precioTxt.toIntOrNull()
+        val stockVal = stockTxt.toIntOrNull()
+        val valido = nombre.isNotBlank() && categoria.isNotBlank() &&
+                precioVal != null && precioVal >= 0 &&
+                stockVal != null && stockVal >= 0
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(titulo) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(nombre, { nombre = it }, label = { Text("Nombre") }, singleLine = true)
+                    OutlinedTextField(categoria, { categoria = it }, label = { Text("Categoría") }, singleLine = true)
+                    OutlinedTextField(
+                        precioTxt, { precioTxt = it.filter(Char::isDigit) },
+                        label = { Text("Precio CLP") }, singleLine = true
+                    )
+                    OutlinedTextField(
+                        stockTxt, { stockTxt = it.filter(Char::isDigit) },
+                        label = { Text("Stock") }, singleLine = true
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Checkbox(checked = activo, onCheckedChange = { activo = it })
+                        Text("Activo")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onSave(
+                            inicial.copy(
+                                nombre = nombre.trim(),
+                                categoria = categoria.trim(),
+                                precioCLP = precioVal ?: 0,
+                                stock = stockVal ?: 0,
+                                activo = activo
+                            )
+                        )
+                    },
+                    enabled = valido
+                ) { Text("Guardar") }
+            },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        )
+    }
+
+    // -------- UI --------
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Productos") },
+                navigationIcon = { TextButton(onClick = onBack) { Text("Volver") } },
+                actions = { TextButton(onClick = { mostrarAgregar = true }) { Text("Agregar") } }
+            )
+        }
+    ) { inner ->
+        Column(
+            modifier = Modifier
+                .padding(inner)
+                .padding(16.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Búsqueda
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Buscar por nombre o categoría") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Filtros
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = categoriaSel == null,
+                    onClick = { categoriaSel = null },
+                    label = { Text("Todas") }
+                )
+                categorias.forEach { cat ->
+                    FilterChip(
+                        selected = categoriaSel == cat,
+                        onClick = { categoriaSel = cat },
+                        label = { Text(cat) }
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                AssistChip(
+                    onClick = { verSoloActivos = !verSoloActivos },
+                    label = { Text(if (verSoloActivos) "Solo activos" else "Todos") }
+                )
+            }
+
+            Divider()
+
+            if (filtrados.isEmpty()) {
+                Text("No hay productos.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(filtrados, key = { it.id }) { p ->
+                        ElevatedCard {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(p.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Text("Categoría: ${p.categoria}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    Text("Precio: ${clp(p.precioCLP)}", fontWeight = FontWeight.Medium)
+                                    Text(
+                                        text = "Stock: ${p.stock}",
+                                        color = if (p.stock > 0) MaterialTheme.colorScheme.onSurface
+                                        else MaterialTheme.colorScheme.error
+                                    )
+                                }
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { cambiarStock(p, +1) }) { Text("+1 stock") }
+                                    OutlinedButton(onClick = { cambiarStock(p, -1) }, enabled = p.stock > 0) { Text("-1 stock") }
+                                    OutlinedButton(onClick = { editarProducto = p }) { Text("Editar") }
+                                    OutlinedButton(onClick = { toggleActivo(p) }) { Text(if (p.activo) "Desactivar" else "Activar") }
+                                    OutlinedButton(
+                                        onClick = { eliminar(p) },
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                    ) { Text("Eliminar") }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
+
+    // Diálogo Agregar
+    if (mostrarAgregar) {
+        val nextId = (productos.maxOfOrNull { it.id } ?: 0L) + 1
+        ProductoDialog(
+            titulo = "Agregar producto",
+            inicial = AdminProductUi(nextId, "", "", 0, 0, true),
+            onDismiss = { mostrarAgregar = false },
+            onSave = { nuevo ->
+                productos = productos + nuevo
+                mostrarAgregar = false
+            }
+        )
+    }
+
+    // Diálogo Editar
+    editarProducto?.let { prod ->
+        ProductoDialog(
+            titulo = "Editar producto",
+            inicial = prod,
+            onDismiss = { editarProducto = null },
+            onSave = { actualizado ->
+                actualizar(actualizado)
+                editarProducto = null
+            }
+        )
+    }
 }
+
 
 // ======================================================
 //
