@@ -109,7 +109,6 @@ fun AccountScreen(
             nextPhotoUri = out
             if (out != null) takePicture.launch(out)
         } else {
-            // opcional: snackbar/toast
         }
     }
 
@@ -117,7 +116,7 @@ fun AccountScreen(
         requestCameraPermission.launch(Manifest.permission.CAMERA)
     }
 
-    // --- Reportes (VM sin Hilt) ---
+    // --- Reportes ---
     val db = remember { AppDatabase.getInstance(context) }
     val supportVm = remember { SupportViewModel(ReportRepository(db.reportDao())) }
 

@@ -55,7 +55,7 @@ private fun PlaceholderBanner(
     }
 }
 
-// ---------- Helper: busca drawable por nombre (seguro, no crashea) ----------
+// ---------- Helper: busca drawable por nombre  ----------
 private fun drawableIdFor(
     packageName: String,
     context: android.content.Context,

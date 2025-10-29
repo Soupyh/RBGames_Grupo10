@@ -57,8 +57,6 @@ class SupportViewModel(
     fun changeStatus(id: Long, status: String) {
         viewModelScope.launch {
             repo.setStatus(id, status)
-            // refresca lista (simple)
-            // Ideal: actualizar en memoria sin reconsultar
             _inbox.value = _inbox.value.map { if (it.id == id) it.copy(status = status) else it }
         }
     }

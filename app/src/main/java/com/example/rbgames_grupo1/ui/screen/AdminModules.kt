@@ -18,7 +18,6 @@ import com.example.rbgames_grupo1.ui.viewmodel.SupportViewModel
 
 import com.example.rbgames_grupo1.data.memory.ProductsStore
 import com.example.rbgames_grupo1.data.memory.AdminProductUi
-import kotlinx.coroutines.flow.collectLatest
 
 // ======================================================
 // ===============  ADMIN > USUARIOS  ===================
@@ -35,7 +34,6 @@ private data class AdminUserUi(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminUsuariosScreen(onBack: () -> Unit) {
-    // Estado en memoria (DEMO). Luego lo conectas a tu VM/DAO real.
     var users by remember {
         mutableStateOf(
             listOf(
@@ -419,7 +417,7 @@ fun AdminReportesScreen(
 
     // Carga inicial de la bandeja
     LaunchedEffect(role, email) {
-        supportVm.loadInbox(role, email) // si tienes loadAll() úsalo aquí para admin
+        supportVm.loadInbox(role, email)
     }
 
     val inbox by supportVm.inbox.collectAsStateWithLifecycle(initialValue = emptyList())

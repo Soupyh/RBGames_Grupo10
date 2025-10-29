@@ -22,7 +22,7 @@ fun AppBottomBar(
     navController: NavHostController,
     items: List<BottomItem>,
     badges: Map<String, Int> = emptyMap(),
-    extraEndItem: BottomItem? = null          // ⬅️ NUEVO: botón opcional (Admin)
+    extraEndItem: BottomItem? = null
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination: NavDestination? = backStackEntry?.destination

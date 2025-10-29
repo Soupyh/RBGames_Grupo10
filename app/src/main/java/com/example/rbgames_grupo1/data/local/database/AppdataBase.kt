@@ -14,8 +14,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// Registra entidades y versión del esquema.
-// Subimos a version = 4 por la nueva tabla de reportes.
+
+
 @Database(
     entities = [UserEntity::class, ReportEntity::class],
     version = 4,
@@ -31,21 +31,21 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile private var INSTANCE: AppDatabase? = null
         private const val DB_NAME = "bsd_rbgames"
 
-        // 1 → 2: agrega columna role a users (por defecto USUARIO)
+        // agrega columna role a users (por defecto USUARIO)
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'USUARIO'")
             }
         }
 
-        // 2 → 3: agrega columna photoUri a users
+        // agrega columna photoUri a users
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE users ADD COLUMN photoUri TEXT")
             }
         }
 
-        // 3 → 4: crea tabla reports
+        // crea tabla reports
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(

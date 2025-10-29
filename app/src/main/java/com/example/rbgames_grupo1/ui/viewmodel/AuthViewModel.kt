@@ -55,7 +55,7 @@ data class UserProfile(
     val nombre: String = "",
     val email: String = "",
     val telefono: String = "",
-    val role: Role = Role.USUARIO,       // ⬅️ ahora guardamos el rol
+    val role: Role = Role.USUARIO,
     val photoUri: String? = null
 )
 
@@ -64,7 +64,7 @@ data class SessionState(
     val user: UserProfile? = null
 )
 
-// ----------------- COLECCIÓN EN MEMORIA (solo para la demo) -----------------
+// ----------------- COLECCIÓN EN MEMORIA  -----------------
 // Modelo mínimo de usuario para la colección (no se expone)
 private data class DemoUser(
     val name: String,
@@ -90,14 +90,14 @@ class AuthViewModel(
 
     // ----------------- Helpers de Roles -----------------
 
-    /** Convierte un string del repositorio al enum Role de forma segura. */
+    // Convierte un string del repositorio al enum Role de forma segura.
     private fun parseRole(text: String?): Role = when (text?.uppercase()) {
         "ADMIN"   -> Role.ADMIN
         "SOPORTE" -> Role.SOPORTE
         else      -> Role.USUARIO
     }
 
-    /** Heurística de respaldo si el repo aún no expone rol. */
+    // Heurística de respaldo si el repo aún no expone rol.
     private fun fallbackRoleByEmail(email: String): Role {
         val e = email.lowercase()
         return when {
@@ -109,12 +109,12 @@ class AuthViewModel(
 
     // ----------------- API de sesión/perfil -----------------
 
-    /** Marca sesión iniciada con un perfil. */
+    // Marca sesión iniciada con un perfil.
     fun setLoggedIn(profile: UserProfile) {
         _session.value = SessionState(isLoggedIn = true, user = profile)
     }
 
-    /** Actualiza campos del perfil en memoria. (Persistir en repo si aplica) */
+    // Actualiza campos del perfil en memoria. (Persistir en repo si aplica)
     fun updateProfile(nombre: String, email: String, telefono: String) {
         _session.update { s ->
             s.copy(user = s.user?.copy(nombre = nombre, email = email, telefono = telefono))
@@ -122,7 +122,7 @@ class AuthViewModel(
         // TODO: repository.updateProfile(...) si tienes backend/BD local
     }
 
-    /** Actualiza SOLO el rol del perfil (útil para pruebas o pantalla de roles). */
+    // Actualiza SOLO el rol del perfil (útil para pruebas o pantalla de roles).
     fun updateRole(role: Role) {
         _session.update { s ->
             s.copy(user = s.user?.copy(role = role))
@@ -130,7 +130,7 @@ class AuthViewModel(
         // TODO: repository.updateUserRole(...) si corresponde
     }
 
-    /** Cierra sesión y limpia el perfil. */
+    // Cierra sesión y limpia el perfil.
     fun logout() {
         _session.value = SessionState(isLoggedIn = false, user = null)
     }
@@ -165,7 +165,7 @@ class AuthViewModel(
 
             _login.update {
                 if (result.isSuccess) {
-                    // 2) 🔽 Cargar perfil completo desde Room y abrir sesión
+                    // 2) Cargar perfil completo desde Room y abrir sesión
                     val u = repository.findByEmail(s.email.trim())
 
                     setLoggedIn(

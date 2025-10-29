@@ -76,7 +76,7 @@ fun CarritoScreen(
         }
     }
 
-    // --------- DETALLE DE VENTA (Modal Bottom Sheet) ----------
+    // --------- DETALLE DE VENTA ----------
     if (showResumen) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(

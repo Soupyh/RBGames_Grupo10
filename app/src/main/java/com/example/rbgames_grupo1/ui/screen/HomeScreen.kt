@@ -100,7 +100,7 @@ fun HomeScreen(
     }
 }
 
-// Pega esto en el mismo archivo (o muévelo a un util). Requiere: import com.example.rbgames_grupo1.R
+
 private fun imageResFor(nombre: String): Int? {
     val key = nombre
         .lowercase()

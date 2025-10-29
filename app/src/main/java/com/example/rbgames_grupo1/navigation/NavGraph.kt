@@ -69,7 +69,7 @@ object Routes {
     const val Admin = "admin"
     const val Account = "account"
 
-    // ------- NUEVAS SUBRUTAS DE ADMIN -------
+    // ------- SUBRUTAS DE ADMIN -------
     const val AdminUsuarios  = "admin/usuarios"
     const val AdminProductos = "admin/productos"
     const val AdminReportes  = "admin/reportes"
@@ -113,7 +113,6 @@ fun AppNavGraph(
     val currentRoute: String? = backStackEntry?.destination?.route?.substringBefore("?")
     val showBottomBar = currentRoute in setOf(
         Routes.Home, Routes.Productos, Routes.Carrito, Routes.Account, Routes.Admin, Routes.Login
-        // Nota: las subrutas de admin NO muestran bottom bar (intencional)
     )
 
     fun navigateSingleTop(route: String) {
@@ -196,7 +195,7 @@ fun AppNavGraph(
                             CartItem(
                                 id = juego.id.toString(),
                                 nombre = juego.nombre,
-                                precio = juego.precioCLP, // ajusta si tu data class usa otro nombre
+                                precio = juego.precioCLP,
                                 imagenRes = null,
                                 cantidad = 1
                             )
@@ -225,7 +224,7 @@ fun AppNavGraph(
                             launchSingleTop = true
                         }
                     },
-                    onGoHome = { /* como lo tenías */ }
+                    onGoHome = {  }
                 )
             }
 
@@ -236,11 +235,9 @@ fun AppNavGraph(
                         usuariosCount = 12,
                         categoriasCount = 6,
                         productosCount = 48,
-                        onOpenUsuarios   = { navController.navigate(Routes.AdminUsuarios) },   // << conectado
-                        onOpenCategorias = { /* por ahora pendiente */ },
-                        onOpenProductos  = { navController.navigate(Routes.AdminProductos) },  // << conectado
-                        onOpenRoles      = { /* por ahora pendiente */ },
-                        onOpenReportes   = { navController.navigate(Routes.AdminReportes) }    // << conectado
+                        onOpenUsuarios   = { navController.navigate(Routes.AdminUsuarios) },
+                        onOpenProductos  = { navController.navigate(Routes.AdminProductos) },
+                        onOpenReportes   = { navController.navigate(Routes.AdminReportes) }
                     )
                 } else {
                     LaunchedEffect(Unit) {
@@ -258,11 +255,11 @@ fun AppNavGraph(
                 AdminUsuariosScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.AdminProductos) { AdminProductosScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.AdminReportes)  {
-                // obtenemos el rol/email del sessionState que ya tienes
+                // obtenemos el rol/email del sessionState
                 val sessionState by authViewModel.session.collectAsStateWithLifecycle()
                 val currentUser = sessionState.user
                 AdminReportesScreen(
-                    role  = currentUser?.role ?: Role.USUARIO,   // ajusta el default si quieres
+                    role  = currentUser?.role ?: Role.USUARIO,
                     email = currentUser?.email.orEmpty(),
                     onBack = { navController.popBackStack() }
                 )
@@ -272,7 +269,7 @@ fun AppNavGraph(
             composable(Routes.Account) {
                 AccountScreen(
                     vm = authViewModel,
-                    onSaved = { /* opcional */ },
+                    onSaved = {  },
                     onLogout = {
                         authViewModel.logout()
                         navController.navigate(Routes.Home) {
