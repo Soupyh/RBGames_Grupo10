@@ -54,6 +54,11 @@ import com.example.rbgames_grupo1.ui.viewmodel.CarritoViewModel
 import com.example.rbgames_grupo1.ui.viewmodel.CartItem
 import com.example.rbgames_grupo1.ui.viewmodel.Role
 
+//imports para descuento en el carrito
+import com.example.rbgames_grupo1.data.memory.ProductsStore
+import com.example.rbgames_grupo1.data.memory.ProductsStore.CartLine
+
+
 // Rutas
 object Routes {
     const val Login = "login"
@@ -205,13 +210,22 @@ fun AppNavGraph(
             composable(Routes.Carrito) {
                 CarritoScreen(
                     vm = carritoVm,
-                    onCheckout = { /* guardar venta si quieres */ },
-                    onGoHome = {
+                    onCheckout = {
+                        // 1) tomar líneas del carrito
+                        val lines: List<CartLine> = carritoVm.items.value.map { item ->
+                            CartLine(productId = item.id.toLong(), quantity = item.cantidad)
+                        }
+                        // 2) descontar stock en el store compartido
+                        ProductsStore.discountByCart(lines)
+
+                        // 3) limpiar carrito y navegar donde quieras
+                        carritoVm.clear()
                         navController.navigate(Routes.Home) {
                             popUpTo(Routes.Home) { inclusive = true }
                             launchSingleTop = true
                         }
-                    }
+                    },
+                    onGoHome = { /* como lo tenías */ }
                 )
             }
 

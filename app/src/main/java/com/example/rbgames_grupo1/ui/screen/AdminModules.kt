@@ -16,6 +16,10 @@ import com.example.rbgames_grupo1.data.repository.ReportRepository
 import com.example.rbgames_grupo1.ui.viewmodel.Role
 import com.example.rbgames_grupo1.ui.viewmodel.SupportViewModel
 
+import com.example.rbgames_grupo1.data.memory.ProductsStore
+import com.example.rbgames_grupo1.data.memory.AdminProductUi
+import kotlinx.coroutines.flow.collectLatest
+
 // ======================================================
 // ===============  ADMIN > USUARIOS  ===================
 // ======================================================
@@ -189,27 +193,13 @@ private fun UsuarioCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminProductosScreen(onBack: () -> Unit) {
-    // -------- Estado DEMO en memoria (luego lo conectas a tu VM/DAO) --------
-    data class AdminProductUi(
-        val id: Long,
-        val nombre: String,
-        val categoria: String,
-        val precioCLP: Int,
-        val stock: Int,
-        val activo: Boolean
-    )
-    fun clp(n: Int) = "$" + "%,d".format(n).replace(',', '.')
+    // Importa el store
 
-    var productos by remember {
-        mutableStateOf(
-            listOf(
-                AdminProductUi(1, "Destiny 2", "Acción", 44990, 12, true),
-                AdminProductUi(2, "GTA V", "Mundo abierto", 62990, 5, true),
-                AdminProductUi(3, "Left 4 Dead 2", "Shooter", 19990, 0, false),
-                AdminProductUi(4, "Payday 2", "Cooperativo", 39990, 21, true)
-            )
-        )
-    }
+
+    // Observa productos compartidos
+    val productos by ProductsStore.productos.collectAsStateWithLifecycle()
+
+    fun clp(n: Int) = "$" + "%,d".format(n).replace(',', '.')
 
     // -------- Búsqueda y filtros --------
     var query by remember { mutableStateOf("") }
@@ -230,18 +220,13 @@ fun AdminProductosScreen(onBack: () -> Unit) {
             .toList()
     }
 
-    // -------- Acciones --------
-    fun actualizar(p: AdminProductUi) {
-        productos = productos.map { if (it.id == p.id) p else it }
-    }
-    fun eliminar(p: AdminProductUi) {
-        productos = productos.filterNot { it.id == p.id }
-    }
+    // -------- Acciones (todas escriben al store) --------
+    fun actualizar(p: AdminProductUi) = ProductsStore.update(p)
+    fun eliminar(p: AdminProductUi) = ProductsStore.delete(p.id)
     fun cambiarStock(p: AdminProductUi, delta: Int) {
-        val nuevo = (p.stock + delta).coerceAtLeast(0)
-        if (nuevo != p.stock) actualizar(p.copy(stock = nuevo))
+        ProductsStore.changeStock(p.id, delta)
     }
-    fun toggleActivo(p: AdminProductUi) = actualizar(p.copy(activo = !p.activo))
+    fun toggleActivo(p: AdminProductUi) = ProductsStore.update(p.copy(activo = !p.activo))
 
     // -------- Diálogos (agregar/editar) --------
     var editarProducto by remember { mutableStateOf<AdminProductUi?>(null) }
@@ -318,40 +303,23 @@ fun AdminProductosScreen(onBack: () -> Unit) {
         }
     ) { inner ->
         Column(
-            modifier = Modifier
-                .padding(inner)
-                .padding(16.dp)
-                .fillMaxSize(),
+            modifier = Modifier.padding(inner).padding(16.dp).fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Búsqueda
             OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text("Buscar por nombre o categoría") },
-                singleLine = true,
+                value = query, onValueChange = { query = it },
+                label = { Text("Buscar por nombre o categoría") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Filtros
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = categoriaSel == null,
-                    onClick = { categoriaSel = null },
-                    label = { Text("Todas") }
-                )
+                FilterChip(selected = categoriaSel == null, onClick = { categoriaSel = null }, label = { Text("Todas") })
                 categorias.forEach { cat ->
-                    FilterChip(
-                        selected = categoriaSel == cat,
-                        onClick = { categoriaSel = cat },
-                        label = { Text(cat) }
-                    )
+                    FilterChip(selected = categoriaSel == cat, onClick = { categoriaSel = cat }, label = { Text(cat) })
                 }
                 Spacer(Modifier.width(8.dp))
-                AssistChip(
-                    onClick = { verSoloActivos = !verSoloActivos },
-                    label = { Text(if (verSoloActivos) "Solo activos" else "Todos") }
-                )
+                AssistChip(onClick = { verSoloActivos = !verSoloActivos },
+                    label = { Text(if (verSoloActivos) "Solo activos" else "Todos") })
             }
 
             Divider()
@@ -370,14 +338,13 @@ fun AdminProductosScreen(onBack: () -> Unit) {
                                     Text("Precio: ${clp(p.precioCLP)}", fontWeight = FontWeight.Medium)
                                     Text(
                                         text = "Stock: ${p.stock}",
-                                        color = if (p.stock > 0) MaterialTheme.colorScheme.onSurface
-                                        else MaterialTheme.colorScheme.error
+                                        color = if (p.stock > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
                                     )
                                 }
 
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedButton(onClick = { cambiarStock(p, +1) }) { Text("+1 stock") }
-                                    OutlinedButton(onClick = { cambiarStock(p, -1) }, enabled = p.stock > 0) { Text("-1 stock") }
+                                    OutlinedButton(onClick = { ProductsStore.changeStock(p.id, +1) }) { Text("+1 stock") }
+                                    OutlinedButton(onClick = { ProductsStore.changeStock(p.id, -1) }, enabled = p.stock > 0) { Text("-1 stock") }
                                     OutlinedButton(onClick = { editarProducto = p }) { Text("Editar") }
                                     OutlinedButton(onClick = { toggleActivo(p) }) { Text(if (p.activo) "Desactivar" else "Activar") }
                                     OutlinedButton(
@@ -400,10 +367,7 @@ fun AdminProductosScreen(onBack: () -> Unit) {
             titulo = "Agregar producto",
             inicial = AdminProductUi(nextId, "", "", 0, 0, true),
             onDismiss = { mostrarAgregar = false },
-            onSave = { nuevo ->
-                productos = productos + nuevo
-                mostrarAgregar = false
-            }
+            onSave = { nuevo -> ProductsStore.add(nuevo); mostrarAgregar = false }
         )
     }
 
@@ -413,13 +377,11 @@ fun AdminProductosScreen(onBack: () -> Unit) {
             titulo = "Editar producto",
             inicial = prod,
             onDismiss = { editarProducto = null },
-            onSave = { actualizado ->
-                actualizar(actualizado)
-                editarProducto = null
-            }
+            onSave = { actualizado -> ProductsStore.update(actualizado); editarProducto = null }
         )
     }
 }
+
 
 
 // ======================================================
