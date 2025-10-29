@@ -242,7 +242,16 @@ fun AppNavGraph(
             // ---------- SUBPÁGINAS DE ADMIN ----------
             composable(Routes.AdminUsuarios)  { AdminUsuariosScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.AdminProductos) { AdminProductosScreen(onBack = { navController.popBackStack() }) }
-            composable(Routes.AdminReportes)  { AdminReportesScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.AdminReportes)  {
+                // obtenemos el rol/email del sessionState que ya tienes
+                val sessionState by authViewModel.session.collectAsStateWithLifecycle()
+                val currentUser = sessionState.user
+                AdminReportesScreen(
+                    role  = currentUser?.role ?: Role.USUARIO,   // ajusta el default si quieres
+                    email = currentUser?.email.orEmpty(),
+                    onBack = { navController.popBackStack() }
+                )
+            }
 
             // ---------- ACCOUNT ----------
             composable(Routes.Account) {

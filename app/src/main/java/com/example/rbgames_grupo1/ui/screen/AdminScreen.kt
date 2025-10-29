@@ -85,13 +85,6 @@ fun AdminScreen(
                     highlightValue = usuariosCount
                 ),
                 AdminAction(
-                    title = "Categorías",
-                    subtitle = "Organiza el catálogo",
-                    icon = Icons.Filled.Category,
-                    onClick = onOpenCategorias,
-                    highlightValue = categoriasCount
-                ),
-                AdminAction(
                     title = "Productos",
                     subtitle = "Alta, stock y precios",
                     icon = Icons.Filled.Inventory2,
@@ -99,14 +92,8 @@ fun AdminScreen(
                     highlightValue = productosCount
                 ),
                 AdminAction(
-                    title = "Roles",
-                    subtitle = "Permisos y accesos",
-                    icon = Icons.Filled.Badge,
-                    onClick = onOpenRoles
-                ),
-                AdminAction(
                     title = "Reportes",
-                    subtitle = "Ventas y actividad",
+                    subtitle = "Reportes de usuarios",
                     icon = Icons.Filled.Assessment,
                     onClick = onOpenReportes
                 ),
